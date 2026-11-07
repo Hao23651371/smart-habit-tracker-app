@@ -1,4 +1,7 @@
 import { Habit, HabitLog, HabitStats } from '../types';
+import { computeHabitStats } from './habitStats';
+
+export { computeHabitStats } from './habitStats';
 
 /**
  * Định dạng Date object thành chuỗi "YYYY-MM-DD"
@@ -104,94 +107,12 @@ export function calculateHabitStreak(habitId: string, logs: HabitLog[], today: s
 
 /**
  * Tính toán số liệu thống kê toàn bộ (streak, tỉ lệ %, tổng lần) từ HabitLog
- * Tuyệt đối không hard-code để các màn hình khớp nhau 100%.
+ * Sử dụng module thống kê duy nhất computeHabitStats để toàn app đồng nhất 100%.
  */
-export function calculateStats(habits: Habit[], logs: HabitLog[], today: string = formatDate()): HabitStats {
-  const activeHabits = habits.filter((h) => h.status === 'active');
-  const activeIds = new Set(activeHabits.map((h) => h._id));
-
-  // Lọc log của các habit đang active
-  const relevantLogs = logs.filter((l) => activeIds.has(l.habitId));
-  const doneLogs = relevantLogs.filter((l) => l.status === 'done');
-  const totalCompleted = doneLogs.length;
-
-  // Tính ngày hoàn thành theo từng ngày
-  const logsByDate = new Map<string, { done: number; total: number }>();
-  for (const log of relevantLogs) {
-    const current = logsByDate.get(log.date) || { done: 0, total: 0 };
-    current.total++;
-    if (log.status === 'done') current.done++;
-    logsByDate.set(log.date, current);
-  }
-
-  // Chuỗi ngày hoàn thành chung (ít nhất 1 habit done mỗi ngày)
-  const doneDateSet = new Set(doneLogs.map((l) => l.date));
-  let currentStreak = 0;
-  let longestStreak = 0;
-
-  // Tính current streak
-  const cursor = new Date(today);
-  if (!doneDateSet.has(today)) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  while (doneDateSet.has(formatDate(cursor))) {
-    currentStreak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  // Tính longest streak
-  const sortedDates = Array.from(doneDateSet).sort();
-  let tempStreak = 0;
-  let prevDate: Date | null = null;
-
-  for (const dateStr of sortedDates) {
-    const curDate = new Date(dateStr);
-    if (!prevDate) {
-      tempStreak = 1;
-    } else {
-      const diffTime = curDate.getTime() - prevDate.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
-      if (diffDays === 1) {
-        tempStreak++;
-      } else {
-        tempStreak = 1;
-      }
-    }
-    if (tempStreak > longestStreak) {
-      longestStreak = tempStreak;
-    }
-    prevDate = curDate;
-  }
-  if (currentStreak > longestStreak) {
-    longestStreak = currentStreak;
-  }
-
-  // Tỉ lệ hoàn thành 30 ngày gần nhất
-  const totalLogsCount = relevantLogs.length;
-  const completionRate = totalLogsCount > 0 ? Math.round((totalCompleted / totalLogsCount) * 100) : 0;
-
-  // Tỉ lệ tuần này
-  const weekDays = getCurrentWeekDays();
-  const weekSet = new Set(weekDays);
-  const weekLogs = relevantLogs.filter((l) => weekSet.has(l.date));
-  const weekDone = weekLogs.filter((l) => l.status === 'done').length;
-  const weeklyRate = weekLogs.length > 0 ? Math.round((weekDone / weekLogs.length) * 100) : 78;
-
-  // Số ngày hoàn hảo (hoàn thành 100% thói quen cần làm trong ngày)
-  let perfectDaysCount = 0;
-  for (const [, counts] of logsByDate.entries()) {
-    if (counts.total > 0 && counts.done === counts.total) {
-      perfectDaysCount++;
-    }
-  }
-
-  return {
-    totalHabits: activeHabits.length,
-    totalCompleted,
-    currentStreak,
-    longestStreak,
-    completionRate,
-    weeklyRate,
-    perfectDaysCount,
-  };
+export function calculateStats(
+  habits: Habit[] = [],
+  logs: HabitLog[] = [],
+  today: string = formatDate()
+): HabitStats {
+  return computeHabitStats(habits, logs, new Date(today));
 }
