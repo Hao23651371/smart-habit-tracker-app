@@ -33,15 +33,12 @@ const tokens = createTokens({
     button: radii.button,
     card: radii.card,
     chip: radii.chip,
-    true: radii.button,
   },
   space: {
     ...spaces,
-    true: spaces[4],
   },
   size: {
     ...fontSizes,
-    true: fontSizes.body,
   },
   zIndex: {
     0: 0,
