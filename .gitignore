@@ -1,5 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment & Secrets
+.env
+.env.*
+.env.local
+*.env
+application-local.properties
+*.pem
+*.key
+
 # IDE & Editors
 .idea/
+*.iml
 .vscode/
 .claude/
 *.swp
@@ -11,3 +24,18 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Expo & Frontend
+.expo/
+frontend/.expo/
+frontend/example/
+example/
+dist/
+web-build/
+expo-env.d.ts
+
+# Backend build & Gradle
+backend/build/
+backend/.gradle/
+build/
+.gradle/
