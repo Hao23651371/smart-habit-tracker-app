@@ -1,0 +1,13 @@
+# IDE & Editors
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
