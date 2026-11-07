@@ -1,231 +1,395 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Image,
+  useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import {
+  ScreenContainer,
+  HabitCard,
+  ProgressRing,
+  StreakChip,
+  FilterChips,
+  FloatingAddButton,
+  EmptyState,
+  Skeleton,
+} from '../../components';
 import { colors, radii, fontSizes, shadows } from '../../theme/tokens';
-import { useAppDispatch, useAppSelector } from '../../store/store';
-import { logout } from '../../store/authSlice';
-import { authApi } from '../../api/authApi';
-import { getGreeting, getVietnameseDateText } from '../../utils/date';
+import { useHabits } from '../../hooks/useHabits';
+import { useLogs } from '../../hooks/useLogs';
+import { useStats } from '../../hooks/useStats';
+import { useAppSelector } from '../../store/store';
+import { formatDate, getGreeting, getVietnameseDateText, calculateHabitStreak } from '../../utils/date';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.auth);
+  const { width } = useWindowDimensions();
+  const isWide = width >= 768;
 
-  const handleLogout = async () => {
-    await authApi.logout();
-    dispatch(logout());
-    router.replace('/(auth)/login');
+  const { user } = useAppSelector((state) => state.auth);
+  const { habits, isLoading: loadingHabits } = useHabits();
+  const { logs, toggleCheck, isLoading: loadingLogs } = useLogs();
+  const { stats } = useStats();
+
+  const [activeSlot, setActiveSlot] = useState<string>('all');
+  const todayStr = formatDate();
+
+  // 1. Lọc thói quen active
+  const activeHabits = useMemo(() => {
+    return habits.filter((h) => h.status === 'active');
+  }, [habits]);
+
+  // 2. Lọc thói quen CẦN LÀM HÔM NAY:
+  // - Daily: ngày nào cũng cần làm
+  // - Weekly: chỉ tính khi đúng thứ trong tuần (1=T2..7=CN). Hôm nay Thứ 7 nên h_workout (T2-T4-T6) không hiện!
+  const todayHabits = useMemo(() => {
+    const now = new Date();
+    const currentDayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+    return activeHabits.filter((h) => {
+      if (h.frequency === 'daily') return true;
+      if (h.frequency === 'weekly' && h.daysOfWeek) {
+        return h.daysOfWeek.includes(currentDayOfWeek);
+      }
+      return false;
+    });
+  }, [activeHabits]);
+
+  // 3. Bộ ID các thói quen cần làm hôm nay đã hoàn thành
+  const doneHabitIds = useMemo(() => {
+    const todayHabitIdSet = new Set(todayHabits.map((h) => h._id));
+    return new Set(
+      logs
+        .filter((l) => l.date === todayStr && l.status === 'done' && todayHabitIdSet.has(l.habitId))
+        .map((l) => l.habitId)
+    );
+  }, [logs, todayStr, todayHabits]);
+
+  // 4. Lọc theo khung giờ (Tất cả | Sáng | Chiều | Tối)
+  const slotOptions = useMemo(() => {
+    const counts = { morning: 0, noon: 0, afternoon: 0, evening: 0 };
+    for (const h of todayHabits) {
+      if (h.timeSlot in counts) counts[h.timeSlot as keyof typeof counts]++;
+    }
+
+    const opts = [{ id: 'all', label: 'Tất cả', count: todayHabits.length }];
+    if (counts.morning > 0) opts.push({ id: 'morning', label: 'Sáng', count: counts.morning });
+    if (counts.noon > 0) opts.push({ id: 'noon', label: 'Trưa', count: counts.noon });
+    if (counts.afternoon > 0) opts.push({ id: 'afternoon', label: 'Chiều', count: counts.afternoon });
+    if (counts.evening > 0) opts.push({ id: 'evening', label: 'Tối', count: counts.evening });
+    return opts;
+  }, [todayHabits]);
+
+  // 5. Phân loại thói quen: Chưa xong nằm trên, Đã xong nằm dưới
+  const { pendingHabits, completedHabits } = useMemo(() => {
+    const filtered =
+      activeSlot === 'all'
+        ? todayHabits
+        : todayHabits.filter((h) => h.timeSlot === activeSlot);
+
+    const pending: typeof filtered = [];
+    const completed: typeof filtered = [];
+
+    for (const h of filtered) {
+      if (doneHabitIds.has(h._id)) {
+        completed.push(h);
+      } else {
+        pending.push(h);
+      }
+    }
+
+    return { pendingHabits: pending, completedHabits: completed };
+  }, [todayHabits, doneHabitIds, activeSlot]);
+
+  // 6. Số lượng hôm nay: đúng 3/5
+  const totalToday = todayHabits.length;
+  const doneCount = doneHabitIds.size;
+  const progressPercent = totalToday > 0 ? Math.round((doneCount / totalToday) * 100) : 0;
+  const isAllDone = totalToday > 0 && doneCount === totalToday;
+
+  const currentStreak = stats?.currentStreak ?? 0;
+  const weeklyRate = stats?.weeklyRate ?? 0;
+
+  const motivationalQuote = isAllDone
+    ? '🎉 Xuất sắc! Bạn đã hoàn thành trọn vẹn mục tiêu hôm nay!'
+    : doneCount === 0
+    ? 'Hãy bắt đầu ngày mới với thói quen đầu tiên nhé!'
+    : `Đang làm rất tốt! Còn ${totalToday - doneCount} thói quen nữa thôi.`;
+
+  const handleToggle = async (habitId: string) => {
+    try {
+      await toggleCheck({ habitId, date: todayStr });
+    } catch {
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
+    }
   };
 
-  const displayName = user?.name || user?.fullName || 'Người dùng';
+  const displayName = user?.name || user?.fullName || 'An';
+  const firstName = displayName.split(' ').pop() || 'An';
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
-      <View style={styles.card}>
-        {/* User Info Header */}
-        <View style={styles.userHeader}>
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>{displayName.charAt(0)}</Text>
-            </View>
-          )}
+  if (loadingHabits || loadingLogs) {
+    return (
+      <ScreenContainer>
+        <Skeleton height={32} style={{ marginBottom: 12, width: 200 }} />
+        <Skeleton height={120} style={{ marginBottom: 14 }} />
+        <Skeleton height={50} style={{ marginBottom: 14 }} />
+        <Skeleton height={80} style={{ marginBottom: 10 }} />
+        <Skeleton height={80} style={{ marginBottom: 10 }} />
+      </ScreenContainer>
+    );
+  }
 
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={styles.greeting}>{getGreeting(displayName.split(' ').pop())}</Text>
-            <Text style={styles.date}>{getVietnameseDateText()}</Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={styles.logoutButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="log-out" size={20} color="#EF4444" />
-          </TouchableOpacity>
+  // Cột trái: Lời chào, Streak, Tiến độ, Thẻ Tuần này
+  const leftColumn = (
+    <View style={[styles.leftCol, isWide && styles.leftColWide]}>
+      {/* Lời chào & Ngày */}
+      <View style={styles.greetingRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greetingText}>{getGreeting(firstName)}</Text>
+          <Text style={styles.dateText}>{getVietnameseDateText()}</Text>
         </View>
-
-        {/* Thông báo đăng nhập thành công */}
-        <View style={styles.authSuccessCard}>
-          <Feather name="check-circle" size={20} color={colors.success} style={{ marginRight: 8 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.authSuccessTitle}>Đăng nhập thành công! (GĐ2 Hoàn tất)</Text>
-            <Text style={styles.authSuccessDesc}>
-              Token đã được lưu trong Storage an toàn và quản lý qua Redux Toolkit.
-            </Text>
-          </View>
-        </View>
-
-        {/* Thông tin tài khoản */}
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Thông tin phiên đăng nhập</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Họ và tên:</Text>
-            <Text style={styles.infoValue}>{displayName}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{user?.email}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Mục tiêu đã chọn:</Text>
-            <Text style={styles.infoValue}>
-              {user?.onboarding?.goals?.join(', ') || 'Chưa cập nhật'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Nút Đăng xuất lớn */}
         <TouchableOpacity
-          onPress={handleLogout}
-          style={styles.fullLogoutBtn}
-          activeOpacity={0.8}
+          style={styles.bellButton}
+          onPress={() => Alert.alert('Thông báo', 'Bạn không có thông báo mới')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Feather name="log-out" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.fullLogoutBtnText}>Đăng xuất khỏi ứng dụng</Text>
+          <Feather name="bell" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      {/* Streak Chip */}
+      <View style={{ marginBottom: 12 }}>
+        <StreakChip streak={currentStreak} />
+      </View>
+
+      {/* Thẻ tiến độ hôm nay */}
+      <View style={styles.progressCard}>
+        <View style={styles.progressContent}>
+          <ProgressRing progress={progressPercent} size={88} />
+          <View style={styles.progressTextWrapper}>
+            <Text style={styles.progressRatio}>
+              Đã xong <Text style={{ color: colors.primary }}>{doneCount}/{totalToday}</Text> thói quen
+            </Text>
+            <Text style={styles.motivationalText}>{motivationalQuote}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Thẻ tuần này 78% */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push('/(tabs)/calendar' as any)}
+        style={styles.weekCard}
+      >
+        <View style={styles.weekCardLeft}>
+          <View style={styles.weekIconBadge}>
+            <Feather name="trending-up" size={18} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.weekCardTitle}>Tuần này: {weeklyRate}% hoàn thành</Text>
+            <Text style={styles.weekCardSubtitle}>Xem chi tiết biểu đồ & xu hướng</Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Cột phải: Thói quen hôm nay (bắt đầu ngang hàng từ trên cùng khi wide)
+  const rightColumn = (
+    <View style={[styles.rightCol, isWide && styles.rightColWide]}>
+      <Text style={styles.sectionTitle}>Thói quen hôm nay</Text>
+
+      {/* Filter Chips */}
+      <FilterChips
+        options={slotOptions}
+        selectedId={activeSlot}
+        onSelect={setActiveSlot}
+      />
+
+      {/* Danh sách thói quen */}
+      {todayHabits.length === 0 ? (
+        <EmptyState
+          icon="check-circle"
+          title="Không có thói quen cần làm"
+          description="Hôm nay bạn không có lịch thói quen nào. Hãy nghỉ ngơi hoặc tạo thói quen mới!"
+          actionLabel="Thêm thói quen"
+          onAction={() => router.push('/habit/form' as any)}
+        />
+      ) : (
+        <View style={styles.habitListWrap}>
+          {/* 1. Chưa xong nằm trên */}
+          {pendingHabits.map((h) => {
+            const streak = calculateHabitStreak(h._id, logs, todayStr);
+            return (
+              <HabitCard
+                key={h._id}
+                habit={h}
+                variant="today"
+                isDone={false}
+                streak={streak}
+                onPress={() => router.push(`/habit/${h._id}` as any)}
+                onToggleCheck={() => handleToggle(h._id)}
+              />
+            );
+          })}
+
+          {/* 2. Đã xong nằm dưới (mờ, gạch ngang) */}
+          {completedHabits.map((h) => {
+            const streak = calculateHabitStreak(h._id, logs, todayStr);
+            return (
+              <HabitCard
+                key={h._id}
+                habit={h}
+                variant="today"
+                isDone={true}
+                streak={streak}
+                onPress={() => router.push(`/habit/${h._id}` as any)}
+                onToggleCheck={() => handleToggle(h._id)}
+              />
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+
+  return (
+    <ScreenContainer>
+      <View style={[styles.mainLayout, isWide && styles.mainLayoutWide]}>
+        {leftColumn}
+        {rightColumn}
+      </View>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton onPress={() => router.push('/habit/form' as any)} />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-  },
-  card: {
+  mainLayout: {
     width: '100%',
-    maxWidth: 520,
-    backgroundColor: colors.card,
-    borderRadius: radii.card,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.card,
   },
-  userHeader: {
+  mainLayoutWide: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'flex-start',
+  },
+  leftCol: {
+    width: '100%',
+    marginBottom: 14, // Thu gọn khoảng cách thừa giữa thẻ tuần và phần dưới trên mobile
+  },
+  leftColWide: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  rightCol: {
+    width: '100%',
+  },
+  rightColWide: {
+    flex: 1.25,
+  },
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.border,
-  },
-  avatarPlaceholder: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  greeting: {
-    fontSize: fontSizes.title2,
+  greetingText: {
+    fontSize: fontSizes.title1,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  date: {
-    fontSize: fontSizes.caption,
+  dateText: {
+    fontSize: fontSizes.body,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  logoutButton: {
+  bellButton: {
     width: 40,
     height: 40,
-    borderRadius: radii.sm,
-    backgroundColor: '#FEE2E2',
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.card,
   },
-  authSuccessCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.successLight,
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    borderRadius: radii.md,
-    padding: 14,
-    marginBottom: 20,
-  },
-  authSuccessTitle: {
-    fontSize: fontSizes.body,
-    fontWeight: '700',
-    color: '#15803D',
-    marginBottom: 2,
-  },
-  authSuccessDesc: {
-    fontSize: fontSizes.caption,
-    color: '#166534',
-  },
-  infoSection: {
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
+  progressCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
     padding: 16,
-    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+    ...shadows.card,
   },
-  sectionTitle: {
-    fontSize: fontSizes.body,
+  progressContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressTextWrapper: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  progressRatio: {
+    fontSize: fontSizes.body + 1,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: 3,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoLabel: {
+  motivationalText: {
     fontSize: fontSizes.caption,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
-  infoValue: {
-    fontSize: fontSizes.caption,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    flexShrink: 1,
-    textAlign: 'right',
-    marginLeft: 12,
-  },
-  fullLogoutBtn: {
+  weekCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryLight,
+    borderRadius: radii.button,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2DCFC',
+  },
+  weekCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weekIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EF4444',
-    borderRadius: radii.button,
-    height: 50,
+    marginRight: 10,
   },
-  fullLogoutBtnText: {
-    color: '#FFFFFF',
-    fontSize: fontSizes.subhead,
+  weekCardTitle: {
+    fontSize: fontSizes.body,
     fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  weekCardSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    fontSize: fontSizes.title2,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  habitListWrap: {
+    marginTop: 4,
+    paddingBottom: 40, // Đảm bảo thẻ cuối cùng và nút check không bao giờ bị nút + che
   },
 });
