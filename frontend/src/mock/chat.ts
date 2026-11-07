@@ -1,4 +1,10 @@
 import { ChatMessage, Suggestion } from '../types';
+import { computeHabitStats } from '../utils/habitStats';
+import { mockHabits } from './habits';
+import { mockHabitLogs } from './logs';
+
+// Lấy thống kê động từ logs thực tế - không hard-code số
+const stats = computeHabitStats(mockHabits, mockHabitLogs);
 
 export const mockChatMessages: ChatMessage[] = [
   {
@@ -6,8 +12,7 @@ export const mockChatMessages: ChatMessage[] = [
     id: 'msg_1',
     userId: 'usr_an_123456',
     role: 'assistant',
-    content:
-      'Chào An! Mình là Trợ lý thói quen AI ✨. Mình thấy tỉ lệ duy trì tuần này của bạn đạt 78% rất tốt! Hôm nay bạn cần hỗ trợ gì về thói quen không?',
+    content: `Chào An! Mình là Trợ lý thói quen AI ✨. Mình thấy tỉ lệ duy trì tuần này của bạn đạt ${stats.weeklyRate}% với chuỗi ${stats.currentStreak} ngày liên tiếp rất tuyệt vời! Hôm nay bạn cần hỗ trợ gì về thói quen không?`,
     createdAt: '2026-11-07T08:00:00Z',
   },
 ];
@@ -18,10 +23,12 @@ export const quickChatPrompts = [
   'Làm sao giữ chuỗi lâu hơn?',
 ];
 
-export const mockAiReplies: Record<string, { content: string; actionButton?: { label: string; action: string; value?: string } }> = {
+export const mockAiReplies: Record<
+  string,
+  { content: string; actionButton?: { label: string; action: string; value?: string } }
+> = {
   'Tuần này mình làm thế nào?': {
-    content:
-      'Tuần này bạn đã hoàn thành 78% mục tiêu! Bạn làm rất tốt thói quen buổi sáng (Uống nước ấm và Đi bộ đạt 100%). Tuy nhiên thói quen Đọc sách buổi tối có 2 hôm bạn hoàn thành hơi muộn sau 22:00.',
+    content: `Tuần này bạn đã hoàn thành ${stats.weeklyRate}% mục tiêu với chuỗi ${stats.currentStreak} ngày liên tiếp! Bạn làm rất tốt thói quen buổi sáng (Uống nước ấm, Đi bộ, Hít thở sâu). Hãy tiếp tục hoàn thành các thói quen buổi tối nhé!`,
     actionButton: {
       label: 'Đổi giờ sang 20:00',
       action: 'UPDATE_TIME',
@@ -38,8 +45,7 @@ export const mockAiReplies: Record<string, { content: string; actionButton?: { l
     },
   },
   'Làm sao giữ chuỗi lâu hơn?': {
-    content:
-      'Quy tắc vàng để giữ streak: "Không bao giờ bỏ lỡ 2 ngày liên tiếp" (Never miss twice). Nếu một hôm quá bận, chỉ cần đọc 1 trang sách thay vì 5 trang để duy trì nhịp độ!',
+    content: `Quy tắc vàng để giữ chuỗi ${stats.currentStreak} ngày của bạn: "Không bao giờ bỏ lỡ 2 ngày liên tiếp" (Never miss twice). Nếu một hôm quá bận, chỉ cần đọc 1 trang sách thay vì 5 trang để duy trì nhịp độ!`,
   },
 };
 
