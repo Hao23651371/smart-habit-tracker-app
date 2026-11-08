@@ -10,27 +10,30 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 
 import tamaguiConfig from '../../tamagui.config';
 import { store, useAppDispatch, useAppSelector } from '../store/store';
 import { setCredentials, logout, setLoading } from '../store/authSlice';
 import { storage } from '../utils/storage';
 import { colors } from '../theme/tokens';
-import { mockUser } from '../mock/users';
+import { useHabits } from '../hooks/useHabits';
+import { useInAppReminder } from '../hooks/useInAppReminder';
+import { useNotificationResponse } from '../hooks/useNotificationResponse';
+import { rescheduleAll, requestPermission } from '../utils/notifications';
+import { getReminderCopy } from '../utils/reminderCopy';
+import { ReminderBanner } from '../components/ReminderBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 5, // 5 phút
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
 
-/**
- * Component kiểm tra token và điều hướng bảo vệ route
- */
+/** Điều hướng bảo vệ màn hình dựa theo trạng thái đăng nhập */
 function AuthNavigationGuard() {
   const router = useRouter();
   const segments = useSegments();
@@ -38,62 +41,90 @@ function AuthNavigationGuard() {
   const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
-  // 1. Kiểm tra token trong storage khi mở app
   useEffect(() => {
     async function checkAuth() {
       try {
         const token = await storage.getItem('token');
         const userStr = await storage.getItem('user');
-
         if (token && userStr) {
-          const user = JSON.parse(userStr);
-          dispatch(setCredentials({ token, user }));
+          dispatch(setCredentials({ token, user: JSON.parse(userStr) }));
         } else {
           dispatch(logout());
         }
-      } catch (error) {
-        console.warn('Error reading stored auth state:', error);
+      } catch {
         dispatch(logout());
       } finally {
         setInitialCheckDone(true);
         dispatch(setLoading(false));
       }
     }
-
     checkAuth();
   }, [dispatch]);
 
-  // 2. Điều hướng dựa theo trạng thái đăng nhập
   useEffect(() => {
     if (!initialCheckDone) return;
-
     const inAuthGroup = segments[0] === '(auth)';
-
     if (!isAuthenticated && !inAuthGroup) {
-      // Chưa đăng nhập mà đang ở ngoài -> Chuyển về màn Login
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
-      // Đã đăng nhập mà đang ở màn auth -> Chuyển vào (tabs)
       router.replace('/(tabs)' as any);
     }
   }, [isAuthenticated, initialCheckDone, segments, router]);
 
   if (!initialCheckDone || isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;
+}
+
+/** Quản lý biểu ngữ nhắc nhở và đồng bộ thông báo toàn ứng dụng */
+function AppReminderController() {
+  const router = useRouter();
+  const { user } = useAppSelector((state) => state.auth);
+  const { habits } = useHabits();
+  const { activeReminder, dismissReminder, confirmReminder } = useInAppReminder();
+  useNotificationResponse();
+
+  useEffect(() => {
+    if (user?.settings?.notificationsEnabled === false) return;
+    if (Platform.OS !== 'web') {
+      requestPermission().then(() => {
+        if (habits.length > 0) rescheduleAll(habits);
+      });
+    } else if (habits.length > 0) {
+      rescheduleAll(habits);
+    }
+  }, [user?.settings?.notificationsEnabled, habits]);
+
+  const copy = activeReminder
+    ? getReminderCopy(activeReminder.habit, activeReminder.type, activeReminder.minutesLeft)
+    : null;
+
+  return (
+    <>
+      <AuthNavigationGuard />
+      {activeReminder && copy && (
+        <ReminderBanner
+          visible={true}
+          title={copy.title}
+          body={copy.body}
+          icon={copy.icon}
+          isSpecialStart={activeReminder.type === 'start'}
+          onConfirm={activeReminder.type === 'pre' ? () => confirmReminder(activeReminder.habit._id) : undefined}
+          onAction={() => {
+            dismissReminder();
+            router.push(`/habit/${activeReminder.habit._id}` as any);
+          }}
+          onDismiss={dismissReminder}
+        />
+      )}
+    </>
+  );
 }
 
 export default function RootLayout() {
@@ -103,9 +134,7 @@ export default function RootLayout() {
     PlusJakartaSans_700Bold,
   });
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <Provider store={store}>
@@ -113,7 +142,7 @@ export default function RootLayout() {
         <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
           <Theme name="light">
             <StatusBar style="dark" />
-            <AuthNavigationGuard />
+            <AppReminderController />
           </Theme>
         </TamaguiProvider>
       </QueryClientProvider>

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +20,11 @@ import { colors, radii, fontSizes, shadows } from '../../theme/tokens';
 import { useHabits } from '../../hooks/useHabits';
 import { mockCategories } from '../../mock/categories';
 import { Habit, HabitFrequency, HabitGoalType, HabitTimeSlot } from '../../types';
+import {
+  requestPermission,
+  scheduleHabitReminders,
+  cancelHabitReminders,
+} from '../../utils/notifications';
 
 const COLOR_OPTIONS = ['#22C55E', '#7C5CFC', '#6366F1', '#F59E0B', '#0EA5E9', '#EC4899', '#14B8A6'];
 const ICON_OPTIONS = ['activity', 'book-open', 'droplet', 'moon', 'sun', 'zap', 'coffee', 'heart'];
@@ -56,6 +62,9 @@ export default function HabitFormScreen() {
   const [reminderTime, setReminderTime] = useState(
     params.reminderTime || existingHabit?.reminderTime || '07:30'
   );
+  const [reminderEnabled, setReminderEnabled] = useState(
+    existingHabit ? existingHabit.reminderEnabled : true
+  );
   const [timeSlot, setTimeSlot] = useState<HabitTimeSlot>(
     (params.timeSlot as HabitTimeSlot) || existingHabit?.timeSlot || 'morning'
   );
@@ -85,6 +94,21 @@ export default function HabitFormScreen() {
     }
   };
 
+  const syncHabitReminder = async (habit: Habit) => {
+    try {
+      if (habit.reminderEnabled && habit.status === 'active') {
+        await requestPermission();
+        await scheduleHabitReminders(habit);
+      } else {
+        await cancelHabitReminders(habit._id);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[syncHabitReminder] Lỗi đồng bộ thông báo:', msg);
+      throw err;
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       setTitleError('Vui lòng nhập tên thói quen');
@@ -92,6 +116,9 @@ export default function HabitFormScreen() {
     }
 
     setLoading(true);
+    let saved: Habit | null = null;
+
+    // BƯỚC 1: Lưu dữ liệu thói quen trước
     try {
       const habitPayload: Partial<Habit> = {
         title: title.trim(),
@@ -100,7 +127,7 @@ export default function HabitFormScreen() {
         frequency,
         daysOfWeek: frequency === 'daily' ? [1, 2, 3, 4, 5, 6, 7] : selectedDays,
         reminderTime,
-        reminderEnabled: true,
+        reminderEnabled,
         timeSlot,
         goalType,
         targetValue: parseInt(targetValue, 10) || 1,
@@ -109,19 +136,41 @@ export default function HabitFormScreen() {
         icon: selectedIcon,
       };
 
-      if (isEditing && existingHabit) {
-        await updateHabit({ id: existingHabit._id, updates: habitPayload });
-        Alert.alert('Thành công', 'Đã cập nhật thông tin thói quen');
-      } else {
-        await createHabit(habitPayload);
-        Alert.alert('Thành công', 'Đã tạo thói quen mới thành công');
-      }
-
-      router.back();
-    } catch {
+      saved = isEditing && existingHabit
+        ? await updateHabit({ id: existingHabit._id, updates: habitPayload })
+        : await createHabit(habitPayload);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[handleSave] Lỗi lưu thói quen vào CSDL:', msg);
       Alert.alert('Lỗi', 'Không thể lưu thói quen');
-    } finally {
       setLoading(false);
+      return;
+    }
+
+    // BƯỚC 2: Đặt lịch thông báo tách biệt (lỗi thông báo không làm hỏng lưu thói quen)
+    let reminderErrorOccurred = false;
+    try {
+      if (saved) {
+        await syncHabitReminder(saved);
+      }
+    } catch (err: unknown) {
+      reminderErrorOccurred = true;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[handleSave] Lỗi đặt lịch thông báo thói quen:', msg);
+    }
+
+    setLoading(false);
+
+    // BƯỚC 3: Báo kết quả cho người dùng
+    if (reminderErrorOccurred) {
+      Alert.alert(
+        'Đã lưu thói quen',
+        'Đã lưu thông tin thói quen thành công, nhưng chưa đặt được lịch nhắc nhở trên thiết bị.',
+        [{ text: 'Đồng ý', onPress: () => router.back() }]
+      );
+    } else {
+      Alert.alert('Thành công', isEditing ? 'Đã cập nhật thói quen' : 'Đã tạo thói quen mới');
+      router.back();
     }
   };
 
@@ -263,14 +312,29 @@ export default function HabitFormScreen() {
           </View>
         </View>
 
+        {/* Bật/Tắt nhắc nhở */}
+        <View style={styles.reminderToggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.fieldLabel}>Bật nhắc nhở</Text>
+            <Text style={styles.fieldSubtitle}>Nhắc trước 10 phút qua thông báo</Text>
+          </View>
+          <Switch
+            value={reminderEnabled}
+            onValueChange={setReminderEnabled}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+
         {/* Giờ nhắc nhở */}
-        <TextField
-          label="Giờ nhắc nhở (HH:mm)"
-          placeholder="07:30"
-          value={reminderTime}
-          onChangeText={setReminderTime}
-          leftIcon="clock"
-        />
+        {reminderEnabled && (
+          <TextField
+            label="Giờ nhắc nhở (HH:mm)"
+            placeholder="07:30"
+            value={reminderTime}
+            onChangeText={setReminderTime}
+            leftIcon="clock"
+          />
+        )}
 
         {/* Loại mục tiêu */}
         <View style={styles.fieldSection}>
@@ -380,6 +444,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: 8,
+  },
+  fieldSubtitle: {
+    fontSize: fontSizes.caption,
+    color: colors.textSecondary,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  reminderToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   catChip: {
     flexDirection: 'row',
