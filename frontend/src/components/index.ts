@@ -15,3 +15,4 @@ export * from './FloatingAddButton';
 export * from './BadgeItem';
 export * from './ChatBubble';
 export * from './SuggestionCard';
+export * from './ReminderBanner';
