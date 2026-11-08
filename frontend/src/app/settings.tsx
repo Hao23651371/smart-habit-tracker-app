@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -17,17 +18,33 @@ import {
   PrimaryButton,
 } from '../components';
 import { colors, radii, fontSizes, shadows } from '../theme/tokens';
-import { useAppDispatch } from '../store/store';
-import { logout } from '../store/authSlice';
+import { useAppDispatch, useAppSelector } from '../store/store';
+import { logout, updateUser } from '../store/authSlice';
 import { authApi } from '../api/authApi';
+import { useHabits } from '../hooks/useHabits';
+import { storage } from '../utils/storage';
+import {
+  getPermissionStatus,
+  requestPermission,
+  rescheduleAll,
+  cancelAllReminders,
+  scheduleTestNotification,
+} from '../utils/notifications';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const { habits } = useHabits();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    user?.settings?.notificationsEnabled ?? true
+  );
+  const [permissionStatus, setPermissionStatus] = useState<
+    'granted' | 'denied' | 'undetermined'
+  >('undetermined');
+  const [testingReminder, setTestingReminder] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [defaultReminderTime, setDefaultReminderTime] = useState('08:00');
   const [language, setLanguage] = useState<'vi' | 'en'>('vi');
 
   // Đổi mật khẩu BottomSheet
@@ -35,6 +52,82 @@ export default function SettingsScreen() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  useEffect(() => {
+    getPermissionStatus().then((s) => setPermissionStatus(s));
+  }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (value) {
+      const perm = await requestPermission();
+      setPermissionStatus(perm);
+      if (perm === 'denied' && Platform.OS !== 'web') {
+        Alert.alert(
+          'Chưa cấp quyền',
+          'Bạn chưa cấp quyền thông báo. Vui lòng mở Cài đặt thiết bị để cho phép thông báo cho ứng dụng.'
+        );
+        return;
+      }
+      setNotificationsEnabled(true);
+      await rescheduleAll(habits);
+    } else {
+      setNotificationsEnabled(false);
+      await cancelAllReminders();
+    }
+
+    if (user) {
+      const updatedUser = {
+        ...user,
+        settings: {
+          ...user.settings,
+          notificationsEnabled: value,
+        },
+      };
+      dispatch(updateUser(updatedUser));
+      await storage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  const handleTestNotification = async () => {
+    if (testingReminder) return;
+    setTestingReminder(true);
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Đã hẹn thử nghiệm',
+        'Trên Web, thông báo dạng banner trượt sẽ tự động hiển thị trong ứng dụng khi có thói quen cần làm trong vòng 10 phút.'
+      );
+      setTestingReminder(false);
+      return;
+    }
+
+    const perm = await getPermissionStatus();
+    if (perm !== 'granted') {
+      const req = await requestPermission();
+      setPermissionStatus(req);
+      if (req !== 'granted') {
+        Alert.alert('Chưa có quyền', 'Vui lòng cấp quyền thông báo để thử nghiệm tính năng này.');
+        setTestingReminder(false);
+        return;
+      }
+    }
+
+    await scheduleTestNotification('Uống nước ấm');
+    Alert.alert(
+      'Đã lên lịch nhắc nhở!',
+      'Hệ thống sẽ gửi thông báo sau đúng 10 giây. Bạn có thể khóa màn hình để kiểm tra.'
+    );
+    setTimeout(() => setTestingReminder(false), 3000);
+  };
+
+  const handleRequestPermission = async () => {
+    const res = await requestPermission();
+    setPermissionStatus(res);
+    if (res === 'granted') {
+      Alert.alert('Thành công', 'Đã cấp quyền thông báo hệ thống');
+    } else {
+      Alert.alert('Chưa cấp quyền', 'Vui lòng mở Cài đặt thiết bị để bật thông báo.');
+    }
+  };
 
   const handleChangePassword = () => {
     if (!oldPassword || !newPassword) {
@@ -76,26 +169,64 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Thông báo & Nhắc nhở</Text>
 
         <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Bật thông báo đẩy</Text>
-            <Text style={styles.rowSubtitle}>Nhận thông báo nhắc nhở khi đến giờ thói quen</Text>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={styles.rowTitle}>Bật thông báo & nhắc nhở</Text>
+            <Text style={styles.rowSubtitle}>Tự động gửi thông báo trước giờ hẹn thói quen</Text>
           </View>
           <Switch
             value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
+            onValueChange={handleToggleNotifications}
             trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>
 
-        <View style={[styles.row, { borderBottomWidth: 0 }]}>
+        <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Giờ nhắc nhở mặc định</Text>
-            <Text style={styles.rowSubtitle}>Áp dụng khi tạo thói quen mới</Text>
+            <Text style={styles.rowTitle}>Thời gian nhắc trước</Text>
+            <Text style={styles.rowSubtitle}>Khoảng đệm chuẩn bị trước giờ hẹn</Text>
           </View>
           <View style={styles.timeTag}>
-            <Text style={styles.timeTagText}>{defaultReminderTime}</Text>
+            <Text style={styles.timeTagText}>10 phút</Text>
           </View>
         </View>
+
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Quyền thông báo hệ thống</Text>
+            <Text style={styles.rowSubtitle}>
+              {permissionStatus === 'granted' ? 'Hệ thống đã sẵn sàng gửi nhắc nhở' : 'Chưa được cấp quyền gửi thông báo'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleRequestPermission}
+            style={[
+              styles.permissionBadge,
+              { backgroundColor: permissionStatus === 'granted' ? '#DCFCE7' : '#FEF3C7' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.permissionBadgeText,
+                { color: permissionStatus === 'granted' ? '#16A34A' : '#D97706' },
+              ]}
+            >
+              {permissionStatus === 'granted' ? 'Đã cấp' : 'Chưa cấp'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.rowClickable, { borderBottomWidth: 0, paddingTop: 14 }]}
+          onPress={handleTestNotification}
+        >
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Feather name="bell" size={18} color={colors.primary} />
+            <Text style={[styles.rowTitle, { color: colors.primary }]}>
+              {testingReminder ? 'Đang gửi thông báo...' : 'Thử nhắc nhở sau 10 giây'}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Nhóm Giao diện & Ngôn ngữ */}
@@ -247,6 +378,15 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     fontWeight: '700',
     color: colors.primary,
+  },
+  permissionBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.chip,
+  },
+  permissionBadgeText: {
+    fontSize: fontSizes.caption,
+    fontWeight: '700',
   },
   langPill: {
     backgroundColor: colors.background,
