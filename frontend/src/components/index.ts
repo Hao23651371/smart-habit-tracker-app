@@ -16,3 +16,5 @@ export * from './BadgeItem';
 export * from './ChatBubble';
 export * from './SuggestionCard';
 export * from './ReminderBanner';
+export * from './CelebrationModal';
+export * from './AchievementUnlockModal';

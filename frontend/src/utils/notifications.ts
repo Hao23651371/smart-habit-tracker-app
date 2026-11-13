@@ -236,7 +236,13 @@ export async function scheduleHabitReminders(habit: Habit): Promise<string[]> {
     await cancelHabitReminders(habit._id);
     await ensureChannel();
     const ids: string[] = [];
-    for (const lead of REMINDER_LEAD_STEPS) {
+    const leadMinutes = habit.reminderLeadMinutes || 10;
+    const repeatCount = Math.min(Math.max(1, habit.reminderRepeatCount || 1), Math.max(1, leadMinutes - 1));
+    const steps: number[] = [];
+    for (let i = 0; i < repeatCount; i++) {
+      steps.push(leadMinutes - i);
+    }
+    for (const lead of steps) {
       const stepIds = await scheduleSingleTrigger(habit, 'pre', -lead, lead);
       ids.push(...stepIds);
     }

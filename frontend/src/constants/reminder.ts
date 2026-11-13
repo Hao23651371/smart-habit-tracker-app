@@ -15,9 +15,9 @@ export const NOTIFICATION_CATEGORY_REMINDER = 'habit_reminder_category';
 export const STORAGE_KEY_HABIT_NOTIFICATIONS = 'habit_notification_ids_map';
 export const STORAGE_KEY_CONFIRMED_HABITS = 'habit_confirmed_reminders_map';
 
-// Thời gian hiển thị banner trong ứng dụng (mili giây)
-export const IN_APP_BANNER_DURATION_MS = 6000;
-export const START_BANNER_DURATION_MS = 5000; // Banner bắt đầu tự mất sau 5s
+// Thời gian hiển thị banner trong ứng dụng (mili giây) - tăng thêm 3s theo yêu cầu
+export const IN_APP_BANNER_DURATION_MS = 9000; // 9 giây (tăng thêm 3s từ 6s)
+export const START_BANNER_DURATION_MS = 8000; // 8 giây (tăng thêm 3s từ 5s)
 
 // Chu kỳ kiểm tra giờ nhắc nhở trong ứng dụng (mili giây)
 export const IN_APP_CHECK_INTERVAL_MS = 15000;

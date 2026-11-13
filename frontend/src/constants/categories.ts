@@ -1,6 +1,6 @@
 import { Category } from '../types';
 
-export const mockCategories: Category[] = [
+export const DEFAULT_CATEGORIES: Category[] = [
   {
     _id: 'cat_health',
     id: 'cat_health',

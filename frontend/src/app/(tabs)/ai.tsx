@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -23,19 +24,88 @@ import {
 import { colors, radii, fontSizes, shadows } from '../../theme/tokens';
 import { useChat } from '../../hooks/useChat';
 import { useStats } from '../../hooks/useStats';
-import { quickChatPrompts } from '../../mock/chat';
+import { useHabits } from '../../hooks/useHabits';
 import { Suggestion } from '../../types';
+
+interface QuickPromptItem {
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  prompt: string;
+  isTest?: boolean;
+}
+
+const QUICK_PROMPT_CATEGORIES: QuickPromptItem[] = [
+  {
+    label: '🌅 Dậy sớm 06:00',
+    icon: 'sun',
+    prompt: 'Lên kế hoạch giúp mình thói quen dậy sớm lúc 06:00 mỗi ngày',
+  },
+  {
+    label: '💧 Giữ chuỗi uống nước 12 ngày',
+    icon: 'droplet',
+    prompt: 'Làm sao để duy trì chuỗi uống nước ấm liên tục 12 ngày không đứt quãng?',
+  },
+  {
+    label: '📖 Quy tắc 2 phút đọc sách',
+    icon: 'book-open',
+    prompt: 'Giải thích và hướng dẫn áp dụng quy tắc 2 phút để đọc sách mỗi tối',
+  },
+  {
+    label: '⏳ Mẹo vượt qua trì hoãn',
+    icon: 'zap',
+    prompt: 'Mình hay bị lười và trì hoãn khi bắt đầu thói quen mới, có mẹo nào giúp mình không?',
+  },
+  {
+    label: '🧘 Thư giãn & Ngủ sâu giấc',
+    icon: 'moon',
+    prompt: 'Gợi ý cho mình thói quen buổi tối giúp dễ ngủ và ngủ sâu giấc hơn',
+  },
+  {
+    label: '🧪 Test hỏi ngoài phạm vi',
+    icon: 'shield',
+    prompt: 'Viết cho tôi một đoạn mã lập trình Java kết nối cơ sở dữ liệu',
+    isTest: true,
+  },
+  {
+    label: '🧪 Test từ ngữ nhạy cảm',
+    icon: 'alert-triangle',
+    prompt: 'Đm ứng dụng này có những tính năng gì thế?',
+    isTest: true,
+  },
+];
 
 export default function AiScreen() {
   const router = useRouter();
-  const { messages, suggestions, isSending, sendMessage, clearChat } = useChat();
+  const {
+    messages,
+    suggestions,
+    isSending,
+    sendMessage,
+    clearChat,
+    isLoadingSuggestions,
+    isRefreshingSuggestions,
+    refreshSuggestions,
+  } = useChat();
   const { stats } = useStats();
+  const { habits } = useHabits();
 
   const [activeTab, setActiveTab] = useState<number>(0); // 0: Chat, 1: Gợi ý
   const [inputText, setInputText] = useState<string>('');
   const [selectedPlan, setSelectedPlan] = useState<Suggestion | null>(null);
+  const [showGuideBanner, setShowGuideBanner] = useState<boolean>(true);
+  const [addedTitles, setAddedTitles] = useState<string[]>([]);
 
+  const scrollRef = useRef<any>(null);
   const weeklyRate = stats?.weeklyRate ?? 0;
+
+  useEffect(() => {
+    // Tự động cuộn xuống cuối khi có tin nhắn mới
+    if (activeTab === 0 && messages.length > 0) {
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    }
+  }, [messages.length, activeTab, isSending]);
 
   const handleSend = async (contentToSend?: string) => {
     const text = (contentToSend || inputText).trim();
@@ -45,11 +115,20 @@ export default function AiScreen() {
     try {
       await sendMessage(text);
     } catch {
-      Alert.alert('Lỗi', 'Không thể gửi tin nhắn');
+      Alert.alert('Lỗi', 'Không thể kết nối tới Trợ lý AI. Vui lòng thử lại sau.');
     }
   };
 
   const handleActionPress = (action: string, value?: string) => {
+    if (action === 'ADD_HABIT' || action === 'CREATE_HABIT') {
+      router.push({
+        pathname: '/habit/form' as any,
+        params: {
+          title: value || 'Thói quen mới',
+        },
+      });
+      return;
+    }
     if (action === 'UPDATE_TIME') {
       Alert.alert(
         'Đã cập nhật giờ!',
@@ -58,7 +137,18 @@ export default function AiScreen() {
     }
   };
 
+  const isSuggestionUsed = (sug: Suggestion) => {
+    const titleLower = sug.title.trim().toLowerCase();
+    // 1. Đã bấm thêm trong phiên này
+    if (addedTitles.includes(titleLower)) return true;
+    // 2. Hoặc đã có trong danh sách thói quen người dùng đã tạo
+    return habits.some((h) => h.title.trim().toLowerCase() === titleLower);
+  };
+
   const handleAddSuggestionNow = (sug: Suggestion) => {
+    // Đánh dấu thói quen đã dùng
+    setAddedTitles((prev) => [...prev, sug.title.trim().toLowerCase()]);
+
     // Điều hướng sang habit/form với query params điền sẵn
     router.push({
       pathname: '/habit/form' as any,
@@ -73,80 +163,172 @@ export default function AiScreen() {
     });
   };
 
+  // Xử lý làm mới và xóa lịch sử trò chuyện
+  const handleClearHistory = () => {
+    Alert.alert(
+      'Làm mới hội thoại',
+      'Bạn có muốn xóa lịch sử trò chuyện và bắt đầu lại cuộc trò chuyện mới?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa làm mới',
+          style: 'destructive',
+          onPress: async () => {
+            await clearChat();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRefreshSuggestions = async () => {
+    try {
+      setAddedTitles([]); // Bấm load lại thì reset trạng thái đã dùng của phiên cũ
+      await refreshSuggestions();
+    } catch {
+      Alert.alert('Thông báo', 'Không thể tạo thêm gợi ý mới vào lúc này. Vui lòng thử lại sau.');
+    }
+  };
+
   // ===================== MỤC 1: CHAT AI =====================
   const chatSection = (
     <View style={styles.chatWrapper}>
-      {/* Thanh trạng thái phân tích */}
+      {/* Banner Hướng dẫn & Giới thiệu phạm vi Trợ lý AI */}
+      <View style={styles.guideCard}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowGuideBanner(!showGuideBanner)}
+          style={styles.guideHeader}
+        >
+          <View style={styles.guideTitleRow}>
+            <View style={styles.guideBadgeIcon}>
+              <Feather name="cpu" size={16} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.guideTitle}>Trợ lý Rèn luyện Thói quen & Kỷ luật</Text>
+              <Text style={styles.guideSubtitle}>Huấn luyện viên kỷ luật cá nhân · Chuẩn Atomic Habits</Text>
+            </View>
+          </View>
+          <View style={styles.guideToggleBtn}>
+            <Text style={styles.guideToggleText}>{showGuideBanner ? 'Thu gọn' : 'Xem HD'}</Text>
+            <Feather
+              name={showGuideBanner ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.primary}
+            />
+          </View>
+        </TouchableOpacity>
+
+        {showGuideBanner && (
+          <View style={styles.guideContent}>
+            <View style={styles.guideScopeBox}>
+              <Text style={styles.guideSectionTitle}>🎯 Bạn có thể hỏi Trợ lý điều gì?</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Lên kế hoạch thói quen mới:</Text> Dậy sớm, đọc sách, uống nước, tập gym, thiền...</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Duy trì chuỗi Streak & vượt trì hoãn:</Text> Phương pháp Atomic Habits, quy tắc 2 phút.</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Tối ưu nhịp sinh học:</Text> Khung giờ sáng, trưa, chiều, tối phù hợp với bạn.</Text>
+            </View>
+
+            <View style={[styles.guideScopeBox, styles.guideRuleBox]}>
+              <Text style={styles.guideSectionTitle}>🛡️ Ràng buộc & Phong cách hỗ trợ:</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Xưng hô:</Text> Xưng "mình", gọi "bạn" thân thiện, tôn trọng và truyền cảm hứng.</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Súc tích:</Text> Trả lời ngắn gọn (2-4 đoạn), cuối mỗi câu luôn có đề xuất hoặc hỏi lại ý kiến bạn.</Text>
+              <Text style={styles.guideBullet}>• <Text style={styles.boldText}>Ràng buộc an toàn:</Text> Trợ lý chuyên về thói quen; sẽ từ chối lịch sự nếu hỏi bậy, thô tục hoặc các chủ đề ngoài phạm vi (chính trị, code lập trình, kê đơn thuốc...).</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Thanh trạng thái hiệu suất của người dùng */}
       <View style={styles.statusPill}>
-        <Feather name="activity" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+        <Feather name="activity" size={13} color={colors.primary} style={{ marginRight: 6 }} />
         <Text style={styles.statusPillText}>
-          Đang phân tích thói quen của bạn · Tỉ lệ duy trì {weeklyRate}%
+          Đang theo dõi kỷ luật của bạn · Tỉ lệ hoàn thành tuần này: {weeklyRate}%
         </Text>
       </View>
 
       {/* Danh sách tin nhắn */}
-      <ScrollView
-        style={styles.messageScroll}
-        contentContainerStyle={styles.messageList}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.messageList}>
         {messages.map((msg) => (
           <ChatBubble
-            key={msg._id}
+            key={msg._id || msg.id}
             message={msg}
             onActionPress={handleActionPress}
           />
         ))}
 
-        {/* Typing indicator 3 chấm nhấp nháy khi AI đang suy nghĩ */}
+        {/* Typing indicator khi AI đang soạn câu trả lời */}
         {isSending && (
           <View style={styles.typingRow}>
             <View style={styles.typingAvatar}>
               <Feather name="zap" size={14} color="#FFFFFF" />
             </View>
             <View style={styles.typingBubble}>
-              <Text style={styles.typingText}>Trợ lý AI đang soạn câu trả lời...</Text>
+              <Text style={styles.typingText}>Trợ lý AI đang phân tích và soạn câu trả lời...</Text>
             </View>
           </View>
         )}
-      </ScrollView>
+      </View>
 
-      {/* Chip gợi ý nhanh ngay trên ô nhập */}
+      {/* Các gợi ý câu hỏi mẫu nhanh (Quick Prompts) */}
       <View style={styles.quickPromptsRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {quickChatPrompts.map((prompt) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+          {QUICK_PROMPT_CATEGORIES.map((item, idx) => (
             <TouchableOpacity
-              key={prompt}
-              onPress={() => handleSend(prompt)}
-              style={styles.quickPromptChip}
+              key={idx}
+              onPress={() => handleSend(item.prompt)}
+              disabled={isSending}
+              style={[
+                styles.quickPromptChip,
+                item.isTest && styles.quickPromptChipTest,
+              ]}
             >
-              <Text style={styles.quickPromptText}>{prompt}</Text>
+              <Feather
+                name={item.icon}
+                size={12}
+                color={item.isTest ? '#D97706' : colors.primary}
+                style={{ marginRight: 5 }}
+              />
+              <Text
+                style={[
+                  styles.quickPromptText,
+                  item.isTest && styles.quickPromptTextTest,
+                ]}
+              >
+                {item.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Ô nhập + Nút gửi */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Hỏi trợ lý thói quen..."
-          placeholderTextColor={colors.textMuted}
-          value={inputText}
-          onChangeText={setInputText}
-          onSubmitEditing={() => handleSend()}
-        />
-        <TouchableOpacity
-          onPress={() => handleSend()}
-          disabled={!inputText.trim() || isSending}
-          style={[
-            styles.sendButton,
-            (!inputText.trim() || isSending) && styles.sendButtonDisabled,
-          ]}
-        >
-          <Feather name="send" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* Ô nhập tin nhắn + Nút gửi */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Hỏi trợ lý (ví dụ: cách giữ chuỗi uống nước)..."
+            placeholderTextColor={colors.textMuted}
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={() => handleSend()}
+            returnKeyType="send"
+            multiline={false}
+          />
+          <TouchableOpacity
+            onPress={() => handleSend()}
+            disabled={!inputText.trim() || isSending}
+            style={[
+              styles.sendButton,
+              (!inputText.trim() || isSending) && styles.sendButtonDisabled,
+            ]}
+          >
+            <Feather name="send" size={17} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 
@@ -154,9 +336,9 @@ export default function AiScreen() {
   const suggestionsSection = (
     <View style={styles.suggestionWrapper}>
       <View style={{ marginBottom: 14 }}>
-        <Text style={styles.sugTitle}>Gợi ý cho bạn</Text>
+        <Text style={styles.sugTitle}>Gợi ý thói quen thông minh</Text>
         <Text style={styles.sugSubtitle}>
-          Dựa trên mục tiêu và thói quen của bạn
+          Được cá nhân hóa dựa trên lối sống và các khung giờ sinh hoạt của bạn
         </Text>
       </View>
 
@@ -165,33 +347,42 @@ export default function AiScreen() {
         <SuggestionCard
           key={sug.id}
           suggestion={sug}
+          isUsed={isSuggestionUsed(sug)}
           onViewPlan={(item) => setSelectedPlan(item)}
           onAddNow={handleAddSuggestionNow}
         />
       ))}
 
-      {/* Nút gợi ý khác */}
+      {/* Nút gợi ý mới từ AI */}
       <TouchableOpacity
-        style={styles.moreSugBtn}
-        onPress={() => Alert.alert('Gợi ý', 'Đã tải thêm gợi ý mới phù hợp với bạn!')}
+        style={[styles.moreSugBtn, isRefreshingSuggestions && { opacity: 0.7 }]}
+        disabled={isRefreshingSuggestions}
+        onPress={handleRefreshSuggestions}
+        activeOpacity={0.8}
       >
-        <Feather name="refresh-cw" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-        <Text style={styles.moreSugText}>Gợi ý khác</Text>
+        {isRefreshingSuggestions ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
+        ) : (
+          <Feather name="refresh-cw" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+        )}
+        <Text style={styles.moreSugText}>
+          {isRefreshingSuggestions ? 'AI đang soạn gợi ý mới...' : 'Tải thêm gợi ý mới ✨'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <ScreenContainer scrollable={activeTab === 1}>
+    <ScreenContainer scrollable={true} scrollRef={scrollRef}>
       <AppHeader
         title="Trợ lý thói quen ✨"
         rightIcon={activeTab === 0 ? 'rotate-ccw' : undefined}
-        onRightPress={clearChat}
+        onRightPress={handleClearHistory}
       />
 
       {/* Chuyển đổi Chat | Gợi ý */}
       <SegmentedControl
-        tabs={['Chat', 'Gợi ý']}
+        tabs={['Trò chuyện AI', 'Gợi ý thói quen']}
         selectedIndex={activeTab}
         onChange={setActiveTab}
       />
@@ -219,7 +410,11 @@ export default function AiScreen() {
           ))}
 
           <TouchableOpacity
-            style={styles.planAddNowBtn}
+            style={[
+              styles.planAddNowBtn,
+              Boolean(selectedPlan && isSuggestionUsed(selectedPlan)) && { backgroundColor: '#16A34A' },
+            ]}
+            disabled={Boolean(selectedPlan && isSuggestionUsed(selectedPlan))}
             onPress={() => {
               if (selectedPlan) {
                 const plan = selectedPlan;
@@ -228,7 +423,11 @@ export default function AiScreen() {
               }
             }}
           >
-            <Text style={styles.planAddNowText}>Thêm thói quen này ngay</Text>
+            <Text style={styles.planAddNowText}>
+              {selectedPlan && isSuggestionUsed(selectedPlan)
+                ? '✓ Đã dùng thói quen này'
+                : 'Thêm thói quen này ngay'}
+            </Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
@@ -238,30 +437,119 @@ export default function AiScreen() {
 
 const styles = StyleSheet.create({
   chatWrapper: {
-    flex: 1,
-    minHeight: 450,
+    width: '100%',
   },
+  // Card hướng dẫn
+  guideCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 10,
+    overflow: 'hidden',
+    ...shadows.card,
+  },
+  guideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+  },
+  guideTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  guideBadgeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  guideTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  guideSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  guideToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radii.chip,
+    gap: 2,
+  },
+  guideToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  guideContent: {
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  guideScopeBox: {
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: radii.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  guideRuleBox: {
+    backgroundColor: '#FEF3C7',
+    borderLeftColor: '#F59E0B',
+  },
+  guideSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  guideBullet: {
+    fontSize: 11.5,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  // Status pill
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
     backgroundColor: colors.primaryLight,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: radii.chip,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statusPillText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: colors.primaryDark,
   },
-  messageScroll: {
-    flex: 1,
-    maxHeight: 380,
-  },
+  // Tin nhắn
   messageList: {
+    width: '100%',
     paddingBottom: 10,
+    paddingTop: 4,
   },
   typingRow: {
     flexDirection: 'row',
@@ -290,10 +578,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontStyle: 'italic',
   },
+  // Quick prompts
   quickPromptsRow: {
-    marginVertical: 10,
+    marginVertical: 8,
   },
   quickPromptChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: radii.chip,
     borderWidth: 1,
@@ -301,11 +592,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  quickPromptChipTest: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
   quickPromptText: {
     fontSize: 12,
     fontWeight: '600',
     color: colors.primary,
   },
+  quickPromptTextTest: {
+    color: '#D97706',
+  },
+  // Ô nhập
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,19 +613,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 12,
-    height: 50,
-    marginTop: 4,
+    height: 48,
+    marginTop: 2,
     ...shadows.card,
   },
   textInput: {
     flex: 1,
     fontSize: fontSizes.body,
     color: colors.textPrimary,
+    paddingVertical: 0,
   },
   sendButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

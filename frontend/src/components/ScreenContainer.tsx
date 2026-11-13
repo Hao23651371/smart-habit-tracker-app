@@ -13,6 +13,7 @@ import { colors } from '../theme/tokens';
 export interface ScreenContainerProps {
   children: React.ReactNode;
   scrollable?: boolean;
+  scrollRef?: any;
   style?: ViewStyle;
   contentContainerStyle?: ViewStyle;
 }
@@ -20,6 +21,7 @@ export interface ScreenContainerProps {
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
   scrollable = true,
+  scrollRef,
   style,
   contentContainerStyle,
 }) => {
@@ -42,12 +44,13 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
     <SafeAreaView style={styles.safeArea}>
       {scrollable ? (
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
             contentContainerStyle,
           ]}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={Platform.OS === 'web'}
           keyboardShouldPersistTaps="handled"
         >
           {innerContent}

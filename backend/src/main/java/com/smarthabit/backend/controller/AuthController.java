@@ -36,4 +36,13 @@ public class AuthController {
         AuthResponse response = authService.getProfile(currentUser);
         return ResponseEntity.ok(ApiResponse.ok(response, "Lấy thông tin tài khoản thành công"));
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal User currentUser,
+            @Valid @RequestBody com.smarthabit.backend.dto.request.ChangePasswordRequest request
+    ) {
+        authService.changePassword(currentUser, request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Đổi mật khẩu thành công!"));
+    }
 }

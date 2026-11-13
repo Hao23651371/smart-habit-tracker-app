@@ -31,6 +31,18 @@ public class ChatMessage {
 
     private String content;
 
+    private ActionButton actionButton;
+
     @CreatedDate
     private Instant createdAt;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ActionButton {
+        private String label;
+        private String action;
+        private String value;
+    }
 }

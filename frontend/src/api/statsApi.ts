@@ -1,18 +1,12 @@
-import { USE_MOCK } from '../config';
 import apiClient from './client';
 import { HabitStats } from '../types';
-import { habitApi } from './habitApi';
-import { logApi } from './logApi';
-import { computeHabitStats } from '../utils/habitStats';
 
 export const statsApi = {
   async getStats(): Promise<HabitStats> {
-    if (USE_MOCK) {
-      const [habits, logs] = await Promise.all([habitApi.getHabits(), logApi.getLogs()]);
-      return computeHabitStats(habits, logs);
-    }
-    const res = await apiClient.get<HabitStats>('/stats');
-    return res.data;
+    const res = await apiClient.get<any>('/stats');
+    const raw = res.data;
+    const stats: HabitStats = (raw && raw.data !== undefined) ? raw.data : raw;
+    return stats;
   },
 };
 

@@ -62,6 +62,8 @@ export interface Habit {
   daysOfWeek?: number[]; // 1=T2, 2=T3, ..., 7=CN
   reminderTime: string;  // "HH:mm"
   reminderEnabled: boolean;
+  reminderLeadMinutes?: number; // 10 | 5 | 3 (phút nhắc trước)
+  reminderRepeatCount?: number; // số lần nhắc lặp lại mỗi phút (< reminderLeadMinutes)
   timeSlot: HabitTimeSlot;
   goalType: HabitGoalType;
   targetValue: number;

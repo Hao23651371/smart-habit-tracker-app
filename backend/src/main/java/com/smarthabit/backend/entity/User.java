@@ -1,5 +1,6 @@
 package com.smarthabit.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,16 @@ import java.time.Instant;
 public class User {
     @Id
     private String id;
+
+    @JsonProperty("_id")
+    public String get_id() {
+        return id;
+    }
+
+    @JsonProperty("name")
+    public String getName() {
+        return fullName != null ? fullName : "";
+    }
 
     @Indexed(unique = true)
     private String email;

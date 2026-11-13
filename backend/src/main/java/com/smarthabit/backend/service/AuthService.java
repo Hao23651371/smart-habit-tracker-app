@@ -70,4 +70,18 @@ public class AuthService {
                 .avatar(currentUser.getAvatar())
                 .build();
     }
+
+    public void changePassword(User currentUser, com.smarthabit.backend.dto.request.ChangePasswordRequest request) {
+        if (currentUser == null) {
+            throw new RuntimeException("Vui lòng đăng nhập lại để thực hiện!");
+        }
+        if (!passwordEncoder.matches(request.getOldPassword(), currentUser.getPassword())) {
+            throw new RuntimeException("Mật khẩu hiện tại không chính xác!");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), currentUser.getPassword())) {
+            throw new RuntimeException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
+        }
+        currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(currentUser);
+    }
 }

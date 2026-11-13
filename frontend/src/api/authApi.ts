@@ -1,6 +1,4 @@
-import { USE_MOCK } from '../config';
 import apiClient from './client';
-import { mockUser, TEST_CREDENTIALS } from '../mock/users';
 import { User } from '../types';
 import { storage } from '../utils/storage';
 
@@ -22,70 +20,79 @@ export interface AuthResponseData {
 
 export const authApi = {
   /**
-   * Đăng nhập tài khoản
+   * Đăng nhập tài khoản qua Backend Spring Boot
    */
   async login(payload: LoginPayload): Promise<AuthResponseData> {
-    if (USE_MOCK) {
-      // Giả lập độ trễ mạng thực tế
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      const trimmedEmail = payload.email.trim().toLowerCase();
-      if (
-        trimmedEmail === TEST_CREDENTIALS.email.toLowerCase() &&
-        payload.password === TEST_CREDENTIALS.password
-      ) {
-        const result: AuthResponseData = {
-          token: TEST_CREDENTIALS.token,
-          user: mockUser,
-        };
-        await storage.setItem('token', result.token);
-        await storage.setItem('user', JSON.stringify(result.user));
-        return result;
-      }
-
-      throw new Error('Email hoặc mật khẩu không đúng');
-    }
-
-    // Khi kết nối Backend Spring Boot thật
-    const response = await apiClient.post<AuthResponseData>('/auth/login', payload);
-    const data = response.data;
-    await storage.setItem('token', data.token);
-    await storage.setItem('user', JSON.stringify(data.user));
-    return data;
+    const response = await apiClient.post<any>('/auth/login', payload);
+    const raw = response.data;
+    const authData = (raw && raw.data !== undefined) ? raw.data : raw;
+    const user: User = {
+      _id: authData.user?.id || authData.user?._id || `usr_${Date.now()}`,
+      id: authData.user?.id || authData.user?._id,
+      name: authData.user?.fullName || authData.user?.name || 'Người dùng',
+      fullName: authData.user?.fullName || authData.user?.name || 'Người dùng',
+      email: authData.user?.email || payload.email,
+      avatarUrl: authData.user?.avatar || authData.user?.avatarUrl,
+      avatar: authData.user?.avatar || authData.user?.avatarUrl,
+      role: authData.user?.role || 'ROLE_USER',
+      onboarding: authData.user?.onboarding || {
+        completed: true,
+        goals: ['Rèn luyện sức khỏe', 'Đọc sách mỗi ngày'],
+        level: 'moderate',
+        reminderSlots: ['morning', 'evening'],
+      },
+      settings: authData.user?.settings || {
+        notificationsEnabled: true,
+        theme: 'light',
+        language: 'vi',
+      },
+      createdAt: authData.user?.createdAt || new Date().toISOString(),
+    };
+    const result: AuthResponseData = {
+      token: authData.token,
+      user,
+    };
+    await storage.setItem('token', result.token);
+    await storage.setItem('user', JSON.stringify(result.user));
+    return result;
   },
 
   /**
-   * Đăng ký tài khoản mới
+   * Đăng ký tài khoản mới qua Backend Spring Boot
    */
   async register(payload: RegisterPayload): Promise<AuthResponseData> {
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      const newUser: User = {
-        ...mockUser,
-        _id: `usr_${Date.now()}`,
-        id: `usr_${Date.now()}`,
-        name: payload.fullName,
-        fullName: payload.fullName,
-        email: payload.email.trim().toLowerCase(),
-        createdAt: new Date().toISOString(),
-      };
-
-      const result: AuthResponseData = {
-        token: `mock-jwt-${Date.now()}`,
-        user: newUser,
-      };
-
-      await storage.setItem('token', result.token);
-      await storage.setItem('user', JSON.stringify(result.user));
-      return result;
-    }
-
-    const response = await apiClient.post<AuthResponseData>('/auth/register', payload);
-    const data = response.data;
-    await storage.setItem('token', data.token);
-    await storage.setItem('user', JSON.stringify(data.user));
-    return data;
+    const response = await apiClient.post<any>('/auth/register', payload);
+    const raw = response.data;
+    const authData = (raw && raw.data !== undefined) ? raw.data : raw;
+    const user: User = {
+      _id: authData.user?.id || authData.user?._id || `usr_${Date.now()}`,
+      id: authData.user?.id || authData.user?._id,
+      name: authData.user?.fullName || authData.user?.name || payload.fullName,
+      fullName: authData.user?.fullName || authData.user?.name || payload.fullName,
+      email: authData.user?.email || payload.email,
+      avatarUrl: authData.user?.avatar || authData.user?.avatarUrl,
+      avatar: authData.user?.avatar || authData.user?.avatarUrl,
+      role: authData.user?.role || 'ROLE_USER',
+      onboarding: authData.user?.onboarding || {
+        completed: true,
+        goals: [],
+        level: 'moderate',
+        reminderSlots: ['morning', 'evening'],
+      },
+      settings: authData.user?.settings || {
+        notificationsEnabled: true,
+        theme: 'light',
+        language: 'vi',
+      },
+      createdAt: authData.user?.createdAt || new Date().toISOString(),
+    };
+    const result: AuthResponseData = {
+      token: authData.token,
+      user,
+    };
+    await storage.setItem('token', result.token);
+    await storage.setItem('user', JSON.stringify(result.user));
+    return result;
   },
 
   /**
@@ -94,6 +101,13 @@ export const authApi = {
   async logout(): Promise<void> {
     await storage.removeItem('token');
     await storage.removeItem('user');
+  },
+
+  /**
+   * Đổi mật khẩu tài khoản qua Backend Spring Boot
+   */
+  async changePassword(payload: { oldPassword: string; newPassword: string }): Promise<void> {
+    await apiClient.post('/auth/change-password', payload);
   },
 
   /**

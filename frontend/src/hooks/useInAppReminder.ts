@@ -67,7 +67,13 @@ export function useInAppReminder() {
       }
     }
     if (confirmedIdsRef.current.has(h._id)) return null;
-    for (const lead of REMINDER_LEAD_STEPS) {
+    const leadMinutes = h.reminderLeadMinutes || 10;
+    const repeatCount = Math.min(Math.max(1, h.reminderRepeatCount || 1), Math.max(1, leadMinutes - 1));
+    const steps: number[] = [];
+    for (let i = 0; i < repeatCount; i++) {
+      steps.push(leadMinutes - i);
+    }
+    for (const lead of steps) {
       const preKey = `${h._id}_pre_${lead}_${todayStr}`;
       if (diff === lead && !shownKeysRef.current.has(preKey)) {
         shownKeysRef.current.add(preKey);

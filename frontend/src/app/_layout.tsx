@@ -10,7 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 
 import tamaguiConfig from '../../tamagui.config';
 import { store, useAppDispatch, useAppSelector } from '../store/store';
@@ -46,7 +46,12 @@ function AuthNavigationGuard() {
       try {
         const token = await storage.getItem('token');
         const userStr = await storage.getItem('user');
-        if (token && userStr) {
+        // Tự động xoá token giả lập cũ nếu còn lưu trong máy
+        if (token && (token.startsWith('mock-') || !token.includes('.'))) {
+          await storage.removeItem('token');
+          await storage.removeItem('user');
+          dispatch(logout());
+        } else if (token && userStr) {
           dispatch(setCredentials({ token, user: JSON.parse(userStr) }));
         } else {
           dispatch(logout());
@@ -71,15 +76,26 @@ function AuthNavigationGuard() {
     }
   }, [isAuthenticated, initialCheckDone, segments, router]);
 
-  if (!initialCheckDone || isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      {(!initialCheckDone || isLoading) && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: colors.background,
+              zIndex: 99999,
+            },
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
+    </View>
+  );
 }
 
 /** Quản lý biểu ngữ nhắc nhở và đồng bộ thông báo toàn ứng dụng */
@@ -115,7 +131,7 @@ function AppReminderController() {
           body={copy.body}
           icon={copy.icon}
           isSpecialStart={activeReminder.type === 'start'}
-          onConfirm={activeReminder.type === 'pre' ? () => confirmReminder(activeReminder.habit._id) : undefined}
+          onConfirm={() => confirmReminder(activeReminder.habit._id)}
           onAction={() => {
             dismissReminder();
             router.push(`/habit/${activeReminder.habit._id}` as any);
