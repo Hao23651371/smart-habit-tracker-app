@@ -30,12 +30,12 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor xử lý lỗi tập trung (ví dụ 401 Unauthorized)
+// Interceptor xử lý lỗi tập trung (ví dụ 401/403 Unauthorized/Forbidden)
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Khi token hết hạn, xoá token khỏi storage
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Khi token hết hạn hoặc không hợp lệ, xoá token khỏi storage
       await storage.removeItem('token');
       await storage.removeItem('user');
     }

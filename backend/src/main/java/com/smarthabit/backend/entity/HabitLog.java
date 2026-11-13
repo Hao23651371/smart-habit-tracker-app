@@ -1,5 +1,6 @@
 package com.smarthabit.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,11 @@ public class HabitLog {
     @Id
     private String id;
 
+    @JsonProperty("_id")
+    public String get_id() {
+        return id;
+    }
+
     private String userId;
 
     private String habitId;
@@ -40,6 +46,8 @@ public class HabitLog {
     private Integer currentValue = 1;
 
     private String note;
+
+    private Instant completedAt;
 
     @CreatedDate
     private Instant loggedAt;

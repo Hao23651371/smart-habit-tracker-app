@@ -1,7 +1,4 @@
-import { Habit, HabitLog, HabitStats } from '../types';
-import { computeHabitStats } from './habitStats';
-
-export { computeHabitStats } from './habitStats';
+import { HabitLog } from '../types';
 
 /**
  * Định dạng Date object thành chuỗi "YYYY-MM-DD"
@@ -103,16 +100,4 @@ export function calculateHabitStreak(habitId: string, logs: HabitLog[], today: s
   }
 
   return streak;
-}
-
-/**
- * Tính toán số liệu thống kê toàn bộ (streak, tỉ lệ %, tổng lần) từ HabitLog
- * Sử dụng module thống kê duy nhất computeHabitStats để toàn app đồng nhất 100%.
- */
-export function calculateStats(
-  habits: Habit[] = [],
-  logs: HabitLog[] = [],
-  today: string = formatDate()
-): HabitStats {
-  return computeHabitStats(habits, logs, new Date(today));
 }

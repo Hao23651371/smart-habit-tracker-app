@@ -6,12 +6,14 @@ import { Suggestion } from '../types';
 
 export interface SuggestionCardProps {
   suggestion: Suggestion;
+  isUsed?: boolean;
   onViewPlan: (suggestion: Suggestion) => void;
   onAddNow: (suggestion: Suggestion) => void;
 }
 
 export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   suggestion,
+  isUsed = false,
   onViewPlan,
   onAddNow,
 }) => {
@@ -72,12 +74,20 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => onAddNow(suggestion)}
-          activeOpacity={0.8}
-          style={styles.addNowBtn}
+          onPress={() => !isUsed && onAddNow(suggestion)}
+          activeOpacity={isUsed ? 1 : 0.8}
+          disabled={isUsed}
+          style={[styles.addNowBtn, isUsed && styles.usedBtn]}
         >
-          <Feather name="plus" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
-          <Text style={styles.addNowText}>Thêm ngay</Text>
+          <Feather
+            name={isUsed ? 'check' : 'plus'}
+            size={16}
+            color={isUsed ? '#15803D' : '#FFFFFF'}
+            style={{ marginRight: 4 }}
+          />
+          <Text style={[styles.addNowText, isUsed && styles.usedText]}>
+            {isUsed ? 'Đã dùng' : 'Thêm ngay'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -191,6 +201,17 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  usedBtn: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  usedText: {
+    color: '#15803D',
+    fontWeight: '700',
   },
 });
 

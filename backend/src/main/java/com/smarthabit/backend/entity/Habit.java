@@ -1,5 +1,6 @@
 package com.smarthabit.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @Builder
@@ -25,13 +27,20 @@ public class Habit {
     @Id
     private String id;
 
+    @JsonProperty("_id")
+    public String get_id() {
+        return id;
+    }
+
     private String userId;
+
+    private String categoryId;
+
+    private String categoryCode;
 
     private String title;
 
     private String description;
-
-    private String categoryCode;
 
     private String color;
 
@@ -39,6 +48,8 @@ public class Habit {
 
     // "daily" | "weekly"
     private String frequency;
+
+    private List<Integer> daysOfWeek;
 
     // "check" | "count" | "duration"
     private String goalType;
@@ -59,9 +70,25 @@ public class Habit {
     // Giờ nhắc nhở, ví dụ "07:30"
     private String reminderTime;
 
+    @Builder.Default
+    private Boolean reminderEnabled = true;
+
+    // Thời gian nhắc trước (phút): 10, 5, 3
+    @Builder.Default
+    private Integer reminderLeadMinutes = 10;
+
+    // Số lần nhắc nhở lặp lại mỗi phút (< reminderLeadMinutes)
+    @Builder.Default
+    private Integer reminderRepeatCount = 1;
+
+    @Builder.Default
+    private String source = "manual";
+
     @CreatedDate
     private Instant createdAt;
 
     @LastModifiedDate
     private Instant updatedAt;
+
+    private Instant archivedAt;
 }

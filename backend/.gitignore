@@ -33,5 +33,9 @@ out/
 /nbdist/
 /.nb-gradle/
 
+### Secrets & Local properties ###
+application-local.properties
+*application-local.properties
+
 ### VS Code ###
 .vscode/

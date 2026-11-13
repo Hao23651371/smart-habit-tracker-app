@@ -89,7 +89,8 @@ export const HabitCard: React.FC<HabitCardProps> = ({
             <View style={styles.dotSeparator} />
             <Text style={styles.slotBadge}>{timeSlotLabel}</Text>
 
-            {streak > 0 && (
+            {/* Ràng buộc: Dưới 3 ngày (1, 2) không hiển thị streak; từ ngày 3 trở đi mới hiển thị */}
+            {streak >= 3 && (
               <>
                 <View style={styles.dotSeparator} />
                 <Text style={styles.streakText}>🔥 {streak}</Text>
@@ -173,7 +174,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   titleDone: {
-    textDecorationLine: 'line-through',
     color: colors.textSecondary,
   },
   metaRow: {

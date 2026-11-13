@@ -15,6 +15,31 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 }) => {
   const isUser = message.role === 'user';
 
+  // Tự động tìm kiếm tên thói quen cụ thể được AI gợi ý trong dấu ngoặc kép hoặc ngoặc đơn
+  const suggestedHabitTitle = React.useMemo(() => {
+    if (isUser) return null;
+    if (message.actionButton?.action === 'ADD_HABIT') return null;
+
+    const matches = message.content.match(/['"“]([^'"“”]{4,35})['"”]/g);
+    if (matches && matches.length > 0) {
+      for (const m of matches) {
+        const clean = m.replace(/['"“”]/g, '').trim();
+        const lower = clean.toLowerCase();
+        if (
+          !lower.includes('http') &&
+          !lower.includes('quy tắc') &&
+          !lower.includes('atomic') &&
+          !lower.includes('phương pháp') &&
+          !lower.includes('trợ lý') &&
+          clean.length >= 4
+        ) {
+          return clean;
+        }
+      }
+    }
+    return null;
+  }, [message.content, isUser, message.actionButton]);
+
   return (
     <View
       style={[
@@ -56,10 +81,39 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
                 message.actionButton!.value
               )
             }
-            style={styles.actionBtn}
+            style={[
+              styles.actionBtn,
+              message.actionButton!.action === 'ADD_HABIT' && styles.addHabitActionBtn,
+            ]}
           >
-            <Feather name="clock" size={14} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.actionBtnText}>{message.actionButton!.label}</Text>
+            <Feather
+              name={message.actionButton!.action === 'ADD_HABIT' ? 'plus-circle' : 'clock'}
+              size={14}
+              color={message.actionButton!.action === 'ADD_HABIT' ? '#FFFFFF' : colors.primary}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.actionBtnText,
+                message.actionButton!.action === 'ADD_HABIT' && styles.addHabitActionText,
+              ]}
+            >
+              {message.actionButton!.label}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Nút nhanh thêm thói quen được AI gợi ý trong văn bản */}
+        {!isUser && Boolean(suggestedHabitTitle) && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => onActionPress?.('ADD_HABIT', suggestedHabitTitle!)}
+            style={styles.addHabitActionBtn}
+          >
+            <Feather name="plus-circle" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Text style={styles.addHabitActionText}>
+              + Thêm thói quen "{suggestedHabitTitle}"
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -131,6 +185,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     fontWeight: '700',
     color: colors.primary,
+  },
+  addHabitActionBtn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    ...shadows.card,
+  },
+  addHabitActionText: {
+    color: '#FFFFFF',
   },
 });
 

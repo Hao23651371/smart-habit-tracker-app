@@ -35,8 +35,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép truy cập không cần token các route auth và template/health check
-                        .requestMatchers("/api/auth/**", "/api/templates/**", "/api/categories/defaults", "/error").permitAll()
+                        // Cho phép truy cập không cần token các route auth, template/health check, và ai assistant
+                        .requestMatchers("/api/auth/**", "/api/templates/**", "/api/categories/defaults", "/api/achievements/**", "/api/ai/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,61 +1,31 @@
-import { USE_MOCK } from '../config';
 import apiClient from './client';
-import { mockHabitLogs } from '../mock/logs';
 import { HabitLog } from '../types';
 import { formatDate } from '../utils/date';
 
-let localLogs = [...mockHabitLogs];
-
 export const logApi = {
   async getLogs(): Promise<HabitLog[]> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 150));
-      return [...localLogs];
-    }
-    const res = await apiClient.get<HabitLog[]>('/habit-logs');
-    return res.data;
+    const res = await apiClient.get<any>('/habit-logs');
+    const raw = res.data;
+    const list: any[] = Array.isArray(raw) ? raw : (raw?.data && Array.isArray(raw.data)) ? raw.data : [];
+    return list.map((l: any) => ({
+      ...l,
+      _id: l._id || l.id,
+      id: l.id || l._id,
+    }));
   },
 
   async toggleHabitCheck(habitId: string, date: string = formatDate()): Promise<{ status: 'done' | 'undone'; log?: HabitLog }> {
-    if (USE_MOCK) {
-      await new Promise((r) => setTimeout(r, 150));
-      const existingIndex = localLogs.findIndex(
-        (l) => l.habitId === habitId && l.date === date
-      );
-
-      if (existingIndex !== -1) {
-        const existing = localLogs[existingIndex];
-        if (existing.status === 'done') {
-          // Bỏ check
-          localLogs.splice(existingIndex, 1);
-          return { status: 'undone' };
-        } else {
-          // Đổi sang done
-          existing.status = 'done';
-          existing.completedAt = new Date().toISOString();
-          return { status: 'done', log: existing };
-        }
-      } else {
-        // Tạo log done mới
-        const newLog: HabitLog = {
-          _id: `log_${date}_${habitId}`,
-          id: `log_${date}_${habitId}`,
-          userId: 'usr_an_123456',
-          habitId,
-          date,
-          status: 'done',
-          value: 1,
-          currentValue: 1,
-          completedAt: new Date().toISOString(),
-          loggedAt: new Date().toISOString(),
-        };
-        localLogs.push(newLog);
-        return { status: 'done', log: newLog };
-      }
+    const res = await apiClient.post<any>('/habit-logs/toggle', { habitId, date });
+    const raw = res.data;
+    const data = (raw && raw.data !== undefined) ? raw.data : raw;
+    if (data?.log) {
+      data.log = {
+        ...data.log,
+        _id: data.log._id || data.log.id,
+        id: data.log.id || data.log._id,
+      };
     }
-
-    const res = await apiClient.post(`/habit-logs/toggle`, { habitId, date });
-    return res.data;
+    return data;
   },
 };
 

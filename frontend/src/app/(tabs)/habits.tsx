@@ -13,7 +13,6 @@ import {
   ScreenContainer,
   AppHeader,
   HabitCard,
-  SegmentedControl,
   FilterChips,
   FloatingAddButton,
   EmptyState,
@@ -23,7 +22,7 @@ import {
 import { colors, radii, fontSizes, shadows } from '../../theme/tokens';
 import { useHabits } from '../../hooks/useHabits';
 import { useLogs } from '../../hooks/useLogs';
-import { mockCategories } from '../../mock/categories';
+import { DEFAULT_CATEGORIES as mockCategories } from '../../constants/categories';
 import { calculateHabitStreak, getCurrentWeekDays } from '../../utils/date';
 import { Habit } from '../../types';
 
@@ -35,18 +34,14 @@ export default function HabitsScreen() {
   const { habits, isLoading } = useHabits();
   const { logs } = useLogs();
 
-  const [activeTab, setActiveTab] = useState<number>(0); // 0: Đang theo dõi, 1: Đã lưu trữ
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [showCategorySheet, setShowCategorySheet] = useState<boolean>(false);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
 
-  // Phân loại active & archived
-  const activeHabits = useMemo(() => habits.filter((h) => h.status === 'active'), [habits]);
-  const archivedHabits = useMemo(() => habits.filter((h) => h.status === 'archived'), [habits]);
-
-  const currentList = activeTab === 0 ? activeHabits : archivedHabits;
+  // Chỉ hiển thị các thói quen đang theo dõi (active), ẩn hoàn toàn mục đã lưu trữ
+  const currentList = useMemo(() => habits.filter((h) => h.status === 'active'), [habits]);
 
   // Lọc theo danh mục và tìm kiếm theo tên
   const filteredHabits = useMemo(() => {
@@ -75,12 +70,10 @@ export default function HabitsScreen() {
       const count = currentList.filter(
         (h) => h.categoryId === cat._id || h.categoryCode === cat.code
       ).length;
-      if (count > 0 || activeTab === 0) {
-        list.push({ id: cat.code, label: cat.name, count });
-      }
+      list.push({ id: cat.code, label: cat.name, count });
     }
     return list;
-  }, [currentList, activeTab]);
+  }, [currentList]);
 
   const weekDays = getCurrentWeekDays();
 
@@ -99,24 +92,13 @@ export default function HabitsScreen() {
   // Danh sách thói quen
   const listColumn = (
     <View style={{ flex: 1 }}>
-      {/* Segmented Control */}
-      <SegmentedControl
-        tabs={[`Đang theo dõi (${activeHabits.length})`, `Đã lưu trữ (${archivedHabits.length})`]}
-        selectedIndex={activeTab}
-        onChange={(idx) => {
-          setActiveTab(idx);
-          setSelectedCategory('all');
-        }}
-      />
-
       {/* Filter Chips danh mục */}
       <FilterChips
         options={categoryOptions}
         selectedId={selectedCategory}
         onSelect={setSelectedCategory}
         appendAction={{
-          label: '+ Danh mục',
-          icon: 'plus',
+          label: 'Danh mục',
           onPress: () => setShowCategorySheet(true),
         }}
       />
@@ -124,23 +106,19 @@ export default function HabitsScreen() {
       {/* Danh sách */}
       {filteredHabits.length === 0 ? (
         <EmptyState
-          icon={activeTab === 0 ? 'list' : 'archive'}
+          icon="list"
           title={
             searchQuery
               ? 'Không tìm thấy thói quen'
-              : activeTab === 0
-              ? 'Chưa có thói quen theo dõi'
-              : 'Chưa có thói quen lưu trữ'
+              : 'Chưa có thói quen theo dõi'
           }
           description={
             searchQuery
               ? `Không có kết quả nào khớp với "${searchQuery}". Hãy thử từ khoá khác.`
-              : activeTab === 0
-              ? 'Hãy tạo thói quen đầu tiên để bắt đầu theo dõi!'
-              : 'Những thói quen đã lưu trữ sẽ xuất hiện tại đây.'
+              : 'Hãy tạo thói quen đầu tiên để bắt đầu theo dõi!'
           }
-          actionLabel={activeTab === 0 && !searchQuery ? 'Thêm thói quen' : undefined}
-          onAction={activeTab === 0 && !searchQuery ? () => router.push('/habit/form' as any) : undefined}
+          actionLabel={!searchQuery ? 'Thêm thói quen' : undefined}
+          onAction={!searchQuery ? () => router.push('/habit/form' as any) : undefined}
         />
       ) : (
         <View style={{ marginTop: 8 }}>
@@ -203,12 +181,20 @@ export default function HabitsScreen() {
         )}
 
         <View style={styles.detailStatsRow}>
-          <View style={styles.detailStatBox}>
-            <Text style={styles.detailStatNum}>
-              🔥 {calculateHabitStreak(detailHabit._id, logs)}
-            </Text>
-            <Text style={styles.detailStatLabel}>Streak hiện tại</Text>
-          </View>
+          {(() => {
+            const rawStreak = calculateHabitStreak(detailHabit._id, logs);
+            const isValidStreak = rawStreak >= 3;
+            return (
+              <View style={styles.detailStatBox}>
+                <Text style={styles.detailStatNum}>
+                  {isValidStreak ? `🔥 ${rawStreak}` : '0 ngày'}
+                </Text>
+                <Text style={styles.detailStatLabel}>
+                  {isValidStreak ? 'Streak hiện tại' : 'Streak (cần ≥ 3 ngày)'}
+                </Text>
+              </View>
+            );
+          })()}
           <View style={styles.detailStatBox}>
             <Text style={styles.detailStatNum}>{detailHabit.targetValue}</Text>
             <Text style={styles.detailStatLabel}>Mục tiêu ({detailHabit.unit || 'lần'})</Text>

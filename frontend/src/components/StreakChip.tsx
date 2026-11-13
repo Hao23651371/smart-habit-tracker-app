@@ -5,12 +5,17 @@ import { colors, radii, fontSizes } from '../theme/tokens';
 export interface StreakChipProps {
   streak: number;
   label?: string;
+  minThreshold?: number;
 }
 
 export const StreakChip: React.FC<StreakChipProps> = ({
   streak,
   label = 'ngày liên tiếp',
+  minThreshold = 3,
 }) => {
+  // Ràng buộc: Streak dưới 3 ngày (1, 2) không hiển thị; chỉ từ ngày thứ 3 liên tiếp trở đi mới hiển thị
+  if (streak < minThreshold) return null;
+
   return (
     <View style={styles.chip}>
       <Text style={styles.text}>

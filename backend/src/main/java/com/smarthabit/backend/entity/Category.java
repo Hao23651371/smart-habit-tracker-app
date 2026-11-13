@@ -1,5 +1,6 @@
 package com.smarthabit.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Category {
     @Id
     private String id;
+
+    @JsonProperty("_id")
+    public String get_id() {
+        return id;
+    }
 
     private String userId; // null nếu là default category của hệ thống
 

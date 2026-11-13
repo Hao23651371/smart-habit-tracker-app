@@ -21,16 +21,10 @@ const GROUP_LABELS: Record<AchievementGroup, string> = {
 
 export default function AchievementsScreen() {
   const router = useRouter();
-  const { achievements, userAchievements } = useAchievements();
+  const { achievements, userAchievements, unlockedIdSet, isUnlocked, getProgress } = useAchievements();
   const { stats } = useStats();
 
-  const unlockedIdSet = useMemo(
-    () => new Set(userAchievements.map((ua) => ua.achievementId)),
-    [userAchievements]
-  );
-
   const currentStreak = stats?.currentStreak ?? 0;
-  const totalCompleted = stats?.totalCompleted ?? 0;
 
   // Nhóm các huy hiệu
   const groupedAchievements = useMemo(() => {
@@ -46,15 +40,6 @@ export default function AchievementsScreen() {
     }
     return groups;
   }, [achievements]);
-
-  // Tính tiến độ hiện tại cho từng loại huy hiệu
-  const getProgressForAchievement = (ach: (typeof achievements)[0]): number => {
-    if (ach.condition.type === 'STREAK') return currentStreak;
-    if (ach.condition.type === 'TOTAL_DONE') return totalCompleted;
-    if (ach.condition.type === 'FIRST_HABIT') return 1;
-    if (ach.condition.type === 'PERFECT_DAY') return stats?.perfectDaysCount || 0;
-    return 0;
-  };
 
   return (
     <ScreenContainer>
@@ -83,6 +68,20 @@ export default function AchievementsScreen() {
         </View>
       </View>
 
+      {/* Banner hướng dẫn ràng buộc Streak & Thành tích nước */}
+      <View style={styles.ruleBanner}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          <Feather name="info" size={15} color="#D97706" style={{ marginRight: 6 }} />
+          <Text style={styles.ruleBannerTitle}>Ràng buộc tính Streak & Thành tích:</Text>
+        </View>
+        <Text style={styles.ruleBannerText}>
+          • <Text style={{ fontWeight: '700' }}>Ràng buộc Streak:</Text> Dưới 3 ngày liên tiếp (1, 2) chưa tính streak. Bạn cần đạt từ ngày thứ 3 liên tục trở lên để kích hoạt ngọn lửa Streak 🔥.
+        </Text>
+        <Text style={styles.ruleBannerText}>
+          • <Text style={{ fontWeight: '700' }}>Huy hiệu Nước & Chuỗi 12 ngày:</Text> Duy trì chuỗi từ 10 - 12 ngày liên tục thực hiện thói quen (uống nước, học bài) để mở khoá huy hiệu "Kiện tướng uống nước" và "Chuỗi vàng 12 ngày"!
+        </Text>
+      </View>
+
       {/* Danh sách nhóm huy hiệu */}
       {(['start', 'streak', 'total', 'special'] as AchievementGroup[]).map((groupKey) => {
         const list = groupedAchievements[groupKey] || [];
@@ -93,20 +92,23 @@ export default function AchievementsScreen() {
             <View style={styles.groupHeaderRow}>
               <Text style={styles.groupTitle}>{GROUP_LABELS[groupKey]}</Text>
               <Text style={styles.groupCountBadge}>
-                {list.filter((a) => unlockedIdSet.has(a._id)).length}/{list.length}
+                {list.filter((a) => isUnlocked(a._id)).length}/{list.length}
               </Text>
             </View>
 
             <View style={styles.badgesGrid}>
-              {list.map((ach) => (
-                <View key={ach._id} style={styles.gridItem}>
-                  <BadgeItem
-                    achievement={ach}
-                    isUnlocked={unlockedIdSet.has(ach._id)}
-                    currentProgress={getProgressForAchievement(ach)}
-                  />
-                </View>
-              ))}
+              {list.map((ach) => {
+                const prog = getProgress(ach);
+                return (
+                  <View key={ach._id} style={styles.gridItem}>
+                    <BadgeItem
+                      achievement={ach}
+                      isUnlocked={prog.isUnlocked}
+                      currentProgress={prog.current}
+                    />
+                  </View>
+                );
+              })}
             </View>
           </View>
         );
@@ -125,8 +127,27 @@ const styles = StyleSheet.create({
     padding: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 24,
+    marginBottom: 16,
     ...shadows.card,
+  },
+  ruleBanner: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: radii.button,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginBottom: 20,
+  },
+  ruleBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  ruleBannerText: {
+    fontSize: 12,
+    color: '#92400E',
+    lineHeight: 18,
+    marginTop: 3,
   },
   summaryLeft: {
     flex: 1,

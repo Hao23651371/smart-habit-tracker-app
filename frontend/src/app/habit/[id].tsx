@@ -23,11 +23,10 @@ import { calculateHabitStreak, getCurrentWeekDays, formatDate } from '../../util
 export default function HabitDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { habits, updateHabit, deleteHabit } = useHabits();
+  const { habits, deleteHabit } = useHabits();
   const { logs } = useLogs();
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [archiveModalVisible, setArchiveModalVisible] = useState(false);
 
   const habit = habits.find((h) => h._id === id || h.id === id);
 
@@ -59,14 +58,6 @@ export default function HabitDetailScreen() {
     .filter((l) => l.habitId === habit._id)
     .slice(-7)
     .reverse();
-
-  const handleToggleArchive = async () => {
-    setArchiveModalVisible(false);
-    const newStatus = habit.status === 'active' ? 'archived' : 'active';
-    await updateHabit({ id: habit._id, updates: { status: newStatus } });
-    Alert.alert('Thành công', newStatus === 'archived' ? 'Đã lưu trữ thói quen' : 'Đã khôi phục thói quen');
-    router.back();
-  };
 
   const handleDelete = async () => {
     setDeleteModalVisible(false);
@@ -111,8 +102,8 @@ export default function HabitDetailScreen() {
       {/* 2 StatCards: Streak hiện tại + Kỷ lục */}
       <View style={styles.statsRow}>
         <StatCard
-          label="Streak hiện tại"
-          value={`🔥 ${currentStreak} ngày`}
+          label={currentStreak >= 3 ? 'Streak hiện tại' : 'Streak (chưa đạt chuỗi ≥ 3)'}
+          value={currentStreak >= 3 ? `🔥 ${currentStreak} ngày` : '0 ngày'}
           color={colors.warning}
         />
         <StatCard
@@ -181,7 +172,7 @@ export default function HabitDetailScreen() {
         </View>
       </View>
 
-      {/* Nhóm nút hành động: Sửa / Lưu trữ / Xoá */}
+      {/* Nhóm nút hành động: Chỉnh sửa / Xoá (Ẩn Lưu trữ theo yêu cầu) */}
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={styles.actionOutlineBtn}
@@ -189,16 +180,6 @@ export default function HabitDetailScreen() {
         >
           <Feather name="edit-2" size={16} color={colors.primary} style={{ marginRight: 6 }} />
           <Text style={styles.actionOutlineText}>Chỉnh sửa</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionOutlineBtn}
-          onPress={() => setArchiveModalVisible(true)}
-        >
-          <Feather name="archive" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-          <Text style={styles.actionOutlineText}>
-            {habit.status === 'active' ? 'Lưu trữ' : 'Bỏ lưu trữ'}
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -226,29 +207,6 @@ export default function HabitDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalConfirmDeleteBtn} onPress={handleDelete}>
               <Text style={styles.modalConfirmDeleteText}>Xoá vĩnh viễn</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </BottomSheet>
-
-      {/* Modal xác nhận lưu trữ */}
-      <BottomSheet
-        visible={archiveModalVisible}
-        onClose={() => setArchiveModalVisible(false)}
-        title="Xác nhận lưu trữ"
-      >
-        <View style={{ gap: 14, alignItems: 'center' }}>
-          <Text style={{ fontSize: fontSizes.body, color: colors.textSecondary, textAlign: 'center' }}>
-            {habit.status === 'active'
-              ? 'Thói quen sẽ được đưa vào mục Lưu trữ và tạm dừng nhắc nhở.'
-              : 'Thói quen sẽ được kích hoạt lại và tiếp tục theo dõi hàng ngày.'}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 8 }}>
-            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setArchiveModalVisible(false)}>
-              <Text style={styles.modalCancelText}>Huỷ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalConfirmArchiveBtn} onPress={handleToggleArchive}>
-              <Text style={styles.modalConfirmArchiveText}>Đồng ý</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -458,19 +416,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmDeleteText: {
-    fontSize: fontSizes.body,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  modalConfirmArchiveBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: radii.button,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalConfirmArchiveText: {
     fontSize: fontSizes.body,
     fontWeight: '700',
     color: '#FFFFFF',

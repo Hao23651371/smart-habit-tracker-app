@@ -16,7 +16,7 @@ import { TextField, PrimaryButton, BottomSheet } from '../../components';
 import { authApi } from '../../api/authApi';
 import { useAppDispatch } from '../../store/store';
 import { setCredentials } from '../../store/authSlice';
-import { TEST_CREDENTIALS } from '../../mock/users';
+const TEST_CREDENTIALS = { email: 'an.nguyen@example.com', password: 'password123' };
 
 export default function LoginScreen() {
   const router = useRouter();

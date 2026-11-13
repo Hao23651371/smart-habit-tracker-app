@@ -1,0 +1,189 @@
+================================================================================
+           CẨM NANG HƯỚNG DẪN CHI TIẾT CÁC MÀN HÌNH & TÍNH NĂNG
+                     ỨNG DỤNG SMART HABIT TRACKER
+================================================================================
+
+Tài liệu này được tạo ra để giúp bạn hiểu rõ 100% ứng dụng đang có những gì,
+ý nghĩa của từng thông tin hiển thị và điều gì xảy ra khi bạn bấm vào các nút/icon.
+
+--------------------------------------------------------------------------------
+MỤC ĐÍCH CHÍNH CỦA ỨNG DỤNG LÀ GÌ?
+--------------------------------------------------------------------------------
+Smart Habit Tracker là ứng dụng giúp bạn xây dựng và duy trì thói quen tốt mỗi ngày.
+Điểm cốt lõi nhất của ứng dụng là:
+1. Nhắc bạn làm thói quen đúng giờ (sáng, trưa, chiều, tối).
+2. Tích chọn hoàn thành (Check-in) mỗi ngày.
+3. Duy trì "Streak" (Chuỗi ngày làm liên tục không ngắt quãng).
+4. Dùng AI để phân tích và gợi ý cách rèn luyện thói quen dễ dàng hơn.
+
+================================================================================
+PHẦN 1: THANH ĐIỀU HƯỚNG ĐÁY (5 BIỂU TƯỢNG / ICONS CHÍNH)
+================================================================================
+
+Mỗi khi bạn mở ứng dụng trên điện thoại, ở dưới cùng sẽ có 5 biểu tượng:
+
+--------------------------------------------------------------------------------
+1. BIỂU TƯỢNG THỨ NHẤT: "HÔM NAY" (Icon dấu tích tròn - Home)
+--------------------------------------------------------------------------------
+Đây là màn hình chính bạn sẽ dùng nhiều nhất trong ngày. Nó trả lời cho câu hỏi:
+"HÔM NAY TÔI CẦN LÀM NHỮNG GÌ VÀ ĐÃ XONG ĐƯỢC BAO NHIÊU RỒI?"
+
+Khi bấm vào icon này, bạn sẽ thấy:
+- Lời chào theo tên: Ví dụ "Chào buổi sáng, An!" kèm ngày tháng hôm nay.
+- Biểu tượng Chuông thông báo: Xem các nhắc nhở mới.
+- Thẻ Chuỗi ngày (Streak):
+  + Hiện biểu tượng ngọn lửa: "🔥 12 ngày liên tiếp".
+  + Ý nghĩa: Bạn đã duy trì thói quen liên tục suốt 12 ngày qua mà không bỏ lỡ.
+- Vòng tròn tiến độ hôm nay:
+  + Hiện hình tròn tím: "3/5 thói quen (60%)".
+  + Ý nghĩa: Hôm nay bạn được giao 5 việc, đã làm xong 3 việc, còn 2 việc nữa.
+- Thẻ "Tuần này: 78% hoàn thành":
+  + Bấm vào thẻ này sẽ dẫn bạn sang thẳng màn hình Lịch & Biểu đồ thống kê.
+- Bộ lọc buổi (Tất cả | Sáng | Tối):
+  + Giúp bạn lọc nhanh xem buổi sáng cần làm gì, buổi tối cần làm gì.
+- Danh sách thói quen hôm nay:
+  + Thói quen CHƯA XONG (nằm ở trên): Đọc sách, Thiền. Có nút tròn trống ở bên phải.
+    -> Khi bạn làm xong việc nào, BẤM VÀO NÚT TRÒN đó. Nút sẽ chuyển sang màu xanh lá
+       và thói quen đó tự động trượt xuống nhóm "Đã xong".
+  + Thói quen ĐÃ XONG (nằm ở dưới): Uống nước ấm, Đi bộ, Hít thở sâu. Tên bị gạch ngang,
+    chữ mờ nhẹ và có dấu tích xanh.
+  + Lưu ý thông minh: Thói quen "Tập thể dục 30 phút" chỉ có lịch vào Thứ 2, Thứ 6
+    nên hôm nay là Thứ Bảy sẽ tự động ẩn đi, không làm rối mắt bạn.
+
+--------------------------------------------------------------------------------
+2. BIỂU TƯỢNG THỨ HAI: "THÓI QUEN" (Icon danh sách 3 gạch ngang)
+--------------------------------------------------------------------------------
+Đây là nơi quản lý TOÀN BỘ thói quen bạn đã từng tạo ra (không chỉ riêng hôm nay).
+
+Khi bấm vào icon này, bạn sẽ thấy:
+- 2 Tab chuyển đổi ở trên cùng:
+  + Tab "Đang theo dõi (6)": Gồm tất cả 6 thói quen bạn đang thực hiện hàng tuần.
+  + Tab "Đã lưu trữ (1)": Những thói quen bạn tạm dừng hoặc đã bỏ (ví dụ: Không uống nước ngọt).
+- Thanh tìm kiếm: Gõ chữ để tìm nhanh thói quen (ví dụ gõ "nước", "sách").
+- Bộ lọc theo danh mục:
+  + Bấm "Tất cả", "Sức khỏe", "Học tập", "Tinh thần"... để xem từng nhóm thói quen.
+- Thẻ thói quen hiển thị chi tiết:
+  + Biểu tượng và màu sắc của danh mục.
+  + Lịch lặp lại (Mỗi ngày, hay Thứ 2-Thứ 6).
+  + Giờ nhắc nhở (07:00, 20:30...).
+  + Dải 7 chấm tròn biểu thị tiến độ cả 7 ngày trong tuần qua (chấm xanh = ngày đó đã làm).
+  + Khi BẤM VÀO BẤT KỲ THẺ NÀO: Bạn sẽ được chuyển sang màn hình "Chi tiết thói quen".
+
+--------------------------------------------------------------------------------
+3. BIỂU TƯỢNG THỨ BA: "LỊCH" (Icon cuốn lịch)
+--------------------------------------------------------------------------------
+Đây là trung tâm theo dõi quá trình nỗ lực theo thời gian và các con số thống kê.
+
+Có 2 phần hiển thị (chuyển bằng nút gạt ở trên cùng):
+A. Phần "LỊCH":
+- Lưới lịch dạng bàn cờ cả tháng:
+  + Có nút mũi tên < và > để xem tháng trước hoặc tháng sau.
+  + Chấm XANH LÁ: Ngày bạn làm đầy đủ 100% thói quen (Ngày hoàn hảo).
+  + Chấm VÀNG: Ngày làm được một phần.
+  + Chấm ĐỎ: Ngày bị bỏ lỡ.
+  + Vòng tròn viền tím: Đang chỉ ngày HÔM NAY.
+- Bấm vào bất kỳ ngày nào trên lịch:
+  + Phía dưới sẽ hiện ra danh sách chi tiết: Vào ngày đó bạn đã làm những thói quen nào
+    và bỏ lỡ thói quen nào.
+- 3 Thẻ số liệu tóm tắt:
+  + "8 Ngày hoàn hảo": Số ngày bạn hoàn thành trọn vẹn 100%.
+  + "🔥 12 Ngày kỷ lục": Chuỗi streak dài nhất bạn từng đạt được.
+  + "78% Tỉ lệ": Tỉ lệ hoàn thành trung bình của cả tháng.
+
+B. Phần "THỐNG KÊ":
+- Thẻ to hiển thị tỉ lệ hoàn thành trung bình 78% kèm tổng số 126 lần check-in.
+- Biểu đồ cột 7 ngày trong tuần: Cho bạn thấy thứ mấy trong tuần bạn chăm chỉ nhất
+  (ví dụ: Thứ 2, Thứ 4 cột cao 85%, Thứ 7 cột thấp hơn).
+
+--------------------------------------------------------------------------------
+4. BIỂU TƯỢNG THỨ TƯ: "TRỢ LÝ AI" (Icon khung chat bong bóng)
+--------------------------------------------------------------------------------
+Đây là người bạn đồng hành thông minh giúp bạn không bị nản khi rèn luyện thói quen.
+
+Gồm 2 mục:
+A. Mục "CHAT AI":
+- Hộp thoại trò chuyện giống như Messenger / Zalo:
+  + AI sẽ tự động nhìn vào số liệu thực tế của bạn để nói chuyện (ví dụ: "Chào An, tuần này
+    bạn đạt 78% rất tốt!").
+  + Các câu hỏi gợi ý nhanh (bấm vào là gửi luôn):
+    * "Tuần này mình làm thế nào?" -> AI sẽ phân tích bạn làm tốt buổi sáng, nhưng buổi tối hay trễ.
+    * "Tôi hay quên đọc sách, nên làm gì?" -> AI hướng dẫn mẹo kết hợp thói quen (Habit Stacking).
+    * "Làm sao giữ chuỗi lâu hơn?" -> AI hướng dẫn nguyên tắc "Không bao giờ bỏ lỡ 2 ngày liên tiếp".
+  + Bạn có thể tự gõ câu hỏi vào ô chat phía dưới để hỏi AI bất kỳ điều gì.
+
+B. Mục "GỢI Ý TỪ AI":
+- AI tự đề xuất các thói quen tốt phù hợp với bạn:
+  + "Tắt màn hình trước khi ngủ 30 phút" (Giúp ngủ sâu hơn).
+  + "Viết 3 điều biết ơn mỗi tối" (Giúp thư giãn tinh thần).
+  + "Uống đủ 2 lít nước mỗi ngày" (Tăng cường sức khỏe).
+- Mỗi gợi ý đều có:
+  + Nút "Xem lộ trình 7 ngày": Bấm vào sẽ mở bảng hướng dẫn từng bước từ Ngày 1 đến Ngày 7.
+  + Nút "Thêm ngay": Bấm vào là tự động điền sẵn thông tin để bạn tạo thói quen đó luôn.
+
+--------------------------------------------------------------------------------
+5. BIỂU TƯỢNG THỨ NĂM: "CÁ NHÂN" (Icon hình người - Profile)
+--------------------------------------------------------------------------------
+Đây là trang hồ sơ của bạn và nơi vinh danh các thành tích đạt được.
+
+Khi bấm vào icon này, bạn sẽ thấy:
+- Phần trên cùng: Ảnh đại diện (Avatar), Họ tên (Trần Bình An), Email và Huy hiệu cấp độ.
+- 4 Thẻ số liệu tổng kết:
+  + 6 thói quen đang duy trì.
+  + 126 lần hoàn thành thói quen.
+  + 🔥 12 ngày chuỗi kỷ lục.
+  + 78% tỉ lệ duy trì tổng thể.
+- Khu vực "Thành tích gần đây":
+  + Trưng bày các huy hiệu bạn đã mở khóa như: "Khởi đầu mới" (Lần đầu check-in),
+    "Chiến binh 3 ngày", "Tuần lễ vàng" (7 ngày), "Chiến binh 10 ngày".
+  + Bấm nút "Xem tất cả" sẽ mở ra Bảng thành tích đầy đủ với 11 huy hiệu.
+- Danh sách menu chức năng:
+  + Nhắc nhở & Thông báo.
+  + Mục tiêu rèn luyện.
+  + Cài đặt ứng dụng.
+  + Nút "Đăng xuất" tài khoản.
+
+================================================================================
+PHẦN 2: NÚT TRÒN MÀU TÍM CÓ DẤU CỘNG (+) Ở GÓC PHẢI
+================================================================================
+Nút này luôn nổi ở góc dưới bên phải màn hình (trên cả Home và Thói quen).
+- TÁC DỤNG: Bấm vào để TẠO THÓI QUEN MỚI.
+- Khi bấm vào, màn hình "Thêm thói quen mới" sẽ hiện ra cho phép bạn:
+  + Nhập tên thói quen (ví dụ: Chạy bộ 15 phút).
+  + Chọn danh mục (Sức khỏe, Học tập, Tinh thần, Giấc ngủ, v.v.).
+  + Chọn tần suất: Hàng ngày hay Chọn các thứ trong tuần (T2, T4, T6...).
+  + Chọn khung giờ: Buổi Sáng, Trưa, Chiều hay Tối.
+  + Đặt giờ nhắc nhở (ví dụ 07:00).
+  + Bấm nút "Tạo thói quen" để lưu lại.
+
+================================================================================
+PHẦN 3: CÁC MÀN HÌNH PHỤ KHÁC
+================================================================================
+
+1. Màn hình "Chi tiết thói quen" (Bấm vào bất kỳ thẻ thói quen nào):
+   - Xem chuỗi ngày riêng của thói quen đó.
+   - Xem tỉ lệ hoàn thành riêng của thói quen đó trong tháng qua.
+   - Lịch sử nhật ký từng ngày bạn đã thực hiện thói quen này.
+   - Nút "Chỉnh sửa" (sửa giờ, sửa tên) hoặc nút "Lưu trữ / Xóa".
+
+2. Màn hình "Bảng thành tích" (Mở từ màn Cá nhân):
+   - Danh sách toàn bộ 11 huy hiệu trong hệ thống.
+   - Huy hiệu nào đạt được rồi sẽ sáng màu rực rỡ kèm ngày mở khóa.
+   - Huy hiệu nào chưa đạt được sẽ bị khóa màu xám kèm thanh phần trăm tiến độ
+     (ví dụ: Cần 30 ngày streak, bạn đang có 12 ngày -> thanh chạy được 40%).
+
+3. Màn hình "Cài đặt" (Settings):
+   - Bật / tắt thông báo nhắc nhở mỗi ngày.
+   - Chuyển đổi giao diện Sáng / Tối (Dark mode).
+   - Chọn ngôn ngữ (Tiếng Việt).
+   - Xem thông tin phiên bản ứng dụng (v1.0.0).
+
+================================================================================
+TÓM TẮT MẸO KHI TRẢI NGHIỆM ỨNG DỤNG
+================================================================================
+1. Vào tab "Hôm nay", bấm thử vào nút tròn bên cạnh thói quen "Đọc 5 trang sách".
+   -> Bạn sẽ thấy nó chuyển thành tích xanh và số tiến độ tăng từ 3/5 lên 4/5!
+2. Vào tab "Lịch", bấm chuyển tab sang "Thống kê" để xem biểu đồ cột 7 ngày.
+3. Vào tab "Trợ lý AI", bấm thử câu hỏi "Tuần này mình làm thế nào?" để xem AI trả lời.
+4. Xoay ngang màn hình hoặc xem trên máy tính: Bạn sẽ thấy menu chuyển thành thanh dọc
+   bên trái rất chuyên nghiệp.
+================================================================================
