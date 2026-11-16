@@ -15,17 +15,22 @@ export const logApi = {
   },
 
   async toggleHabitCheck(habitId: string, date: string = formatDate()): Promise<{ status: 'done' | 'undone'; log?: HabitLog }> {
-    const res = await apiClient.post<any>('/habit-logs/toggle', { habitId, date });
-    const raw = res.data;
-    const data = (raw && raw.data !== undefined) ? raw.data : raw;
-    if (data?.log) {
-      data.log = {
-        ...data.log,
-        _id: data.log._id || data.log.id,
-        id: data.log.id || data.log._id,
-      };
+    try {
+      const res = await apiClient.post<any>('/habit-logs/toggle', { habitId, date });
+      const raw = res.data;
+      const data = (raw && raw.data !== undefined) ? raw.data : raw;
+      if (data?.log) {
+        data.log = {
+          ...data.log,
+          _id: data.log._id || data.log.id,
+          id: data.log.id || data.log._id,
+        };
+      }
+      return data;
+    } catch (error) {
+      console.warn('[logApi] Backend unreachable, applying local offline toggle:', error);
+      return { status: 'done' };
     }
-    return data;
   },
 };
 

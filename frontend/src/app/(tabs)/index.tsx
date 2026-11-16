@@ -141,20 +141,34 @@ export default function HomeScreen() {
       });
   }, [todayHabits, doneHabitIds]);
 
-  // 4. Lọc theo khung giờ (Tất cả | Sáng | Chiều | Tối)
+  // 4. Lọc theo khung giờ (Tất cả | Sáng | Trưa | Chiều | Tối)
+  // Tự động tính toán số lượng thói quen còn lại cần làm và cập nhật ngay khi hoàn thành
   const slotOptions = useMemo(() => {
-    const counts = { morning: 0, noon: 0, afternoon: 0, evening: 0 };
+    const totalBySlot = { morning: 0, noon: 0, afternoon: 0, evening: 0 };
+    const remainingBySlot = { morning: 0, noon: 0, afternoon: 0, evening: 0 };
+    let totalRemaining = 0;
+
     for (const h of todayHabits) {
-      if (h.timeSlot in counts) counts[h.timeSlot as keyof typeof counts]++;
+      const slot = h.timeSlot as keyof typeof totalBySlot;
+      if (slot in totalBySlot) {
+        totalBySlot[slot]++;
+      }
+      const isDone = doneHabitIds.has(h._id);
+      if (!isDone) {
+        totalRemaining++;
+        if (slot in remainingBySlot) {
+          remainingBySlot[slot]++;
+        }
+      }
     }
 
-    const opts = [{ id: 'all', label: 'Tất cả', count: todayHabits.length }];
-    if (counts.morning > 0) opts.push({ id: 'morning', label: 'Sáng', count: counts.morning });
-    if (counts.noon > 0) opts.push({ id: 'noon', label: 'Trưa', count: counts.noon });
-    if (counts.afternoon > 0) opts.push({ id: 'afternoon', label: 'Chiều', count: counts.afternoon });
-    if (counts.evening > 0) opts.push({ id: 'evening', label: 'Tối', count: counts.evening });
+    const opts = [{ id: 'all', label: 'Tất cả', count: totalRemaining }];
+    if (totalBySlot.morning > 0) opts.push({ id: 'morning', label: 'Sáng', count: remainingBySlot.morning });
+    if (totalBySlot.noon > 0) opts.push({ id: 'noon', label: 'Trưa', count: remainingBySlot.noon });
+    if (totalBySlot.afternoon > 0) opts.push({ id: 'afternoon', label: 'Chiều', count: remainingBySlot.afternoon });
+    if (totalBySlot.evening > 0) opts.push({ id: 'evening', label: 'Tối', count: remainingBySlot.evening });
     return opts;
-  }, [todayHabits]);
+  }, [todayHabits, doneHabitIds]);
 
   // 5. Phân loại thói quen: Chưa xong nằm trên, Đã xong nằm dưới
   const { pendingHabits, completedHabits } = useMemo(() => {
@@ -412,14 +426,15 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      floatingAction={
+        <FloatingAddButton onPress={() => router.push('/habit/form' as any)} />
+      }
+    >
       <View style={[styles.mainLayout, isWide && styles.mainLayoutWide]}>
         {leftColumn}
         {rightColumn}
       </View>
-
-      {/* Floating Add Button */}
-      <FloatingAddButton onPress={() => router.push('/habit/form' as any)} />
 
       {/* Modal danh sách thông báo nhắc nhở (chỉ để xem, không chọn được) */}
       <BottomSheet

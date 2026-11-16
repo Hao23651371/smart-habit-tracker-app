@@ -646,7 +646,10 @@ export default function CalendarScreen() {
   if (loadingHabits || loadingLogs) {
     return (
       <ScreenContainer>
-        <AppHeader title="Lịch & Thống kê" />
+        <AppHeader
+          title="Lịch theo dõi"
+          subtitle={`Hôm nay: ${getVietnameseDateText()}`}
+        />
         <Skeleton height={44} style={{ marginBottom: 16 }} />
         <Skeleton height={280} style={{ marginBottom: 16 }} />
       </ScreenContainer>
@@ -1371,7 +1374,12 @@ export default function CalendarScreen() {
 
   return (
     <ScreenContainer>
-      <AppHeader title="Lịch theo dõi 📅" />
+      <AppHeader
+        title="Lịch theo dõi"
+        subtitle={`Hôm nay: ${getVietnameseDateText()}`}
+        rightIcon="calendar"
+        onRightPress={handleJumpToToday}
+      />
 
       {SHOW_ADMIN_STATS && (
         <SegmentedControl

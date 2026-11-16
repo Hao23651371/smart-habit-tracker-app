@@ -17,6 +17,7 @@ export interface ScreenContainerProps {
   scrollRef?: any;
   style?: ViewStyle;
   contentContainerStyle?: ViewStyle;
+  floatingAction?: React.ReactNode;
 }
 
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
@@ -25,6 +26,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   scrollRef,
   style,
   contentContainerStyle,
+  floatingAction,
 }) => {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -80,6 +82,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           {innerContent}
         </View>
       )}
+      {floatingAction}
     </View>
   );
 };
