@@ -32,8 +32,19 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            // 1. Khởi tạo tài khoản mẫu An Nguyễn nếu chưa có
-            String sampleEmail = "an.nguyen@example.com";
+            // 1. Khởi tạo tài khoản mẫu An Nguyễn chuẩn định dạng Gmail annguyen@gmail.com
+            String sampleEmail = "annguyen@gmail.com";
+
+            // Nếu có tài khoản cũ (an.nguyen@example.com hoặc an.nguyen@gmail.com), nâng cấp sang annguyen@gmail.com
+            List.of("an.nguyen@example.com", "an.nguyen@gmail.com").forEach(oldEmail -> {
+                userRepository.findByEmail(oldEmail).ifPresent(oldUser -> {
+                    oldUser.setEmail(sampleEmail);
+                    oldUser.setUpdatedAt(Instant.now());
+                    userRepository.save(oldUser);
+                    log.info(">>> [DataInitializer] Đã cập nhật email cũ {} sang Gmail chuẩn: {}", oldEmail, sampleEmail);
+                });
+            });
+
             User user = userRepository.findByEmail(sampleEmail).orElseGet(() -> {
                 User newUser = User.builder()
                         .email(sampleEmail)
@@ -44,7 +55,7 @@ public class DataInitializer implements CommandLineRunner {
                         .updatedAt(Instant.now())
                         .build();
                 User saved = userRepository.save(newUser);
-                log.info(">>> [DataInitializer] Đã tự động tạo tài khoản mẫu: {}", sampleEmail);
+                log.info(">>> [DataInitializer] Đã tự động tạo tài khoản mẫu Gmail: {}", sampleEmail);
                 return saved;
             });
 

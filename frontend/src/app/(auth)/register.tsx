@@ -16,6 +16,8 @@ import { authApi } from '../../api/authApi';
 import { useAppDispatch } from '../../store/store';
 import { setCredentials } from '../../store/authSlice';
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export default function RegisterScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -48,10 +50,10 @@ export default function RegisterScreen() {
 
     const emailTrim = email.trim();
     if (!emailTrim) {
-      setEmailError('Vui lòng nhập địa chỉ email');
+      setEmailError('Vui lòng nhập địa chỉ email/Gmail');
       isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-      setEmailError('Email không đúng định dạng');
+    } else if (!EMAIL_REGEX.test(emailTrim)) {
+      setEmailError('Email/Gmail không đúng định dạng (VD: example@gmail.com)');
       isValid = false;
     }
 
@@ -80,10 +82,12 @@ export default function RegisterScreen() {
     setLoading(true);
     setGeneralError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       const data = await authApi.register({
         fullName: fullName.trim(),
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -91,7 +95,13 @@ export default function RegisterScreen() {
       // Đăng ký thành công, chuyển hướng vào nhóm tabs chính
       router.replace('/(tabs)' as any);
     } catch (err: any) {
-      setGeneralError(err.message || 'Đăng ký tài khoản thất bại');
+      const backendMsg =
+        err.response?.data?.message ||
+        err.response?.data?.data?.email ||
+        (typeof err.response?.data === 'string' ? err.response?.data : null) ||
+        err.message ||
+        'Đăng ký tài khoản thất bại';
+      setGeneralError(backendMsg);
     } finally {
       setLoading(false);
     }
@@ -150,8 +160,7 @@ export default function RegisterScreen() {
             />
 
             <TextField
-              label="Email"
-              placeholder="nhap.email@vidu.com"
+              label="Email / Gmail"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}

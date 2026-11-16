@@ -16,7 +16,8 @@ import { TextField, PrimaryButton, BottomSheet } from '../../components';
 import { authApi } from '../../api/authApi';
 import { useAppDispatch } from '../../store/store';
 import { setCredentials } from '../../store/authSlice';
-const TEST_CREDENTIALS = { email: 'an.nguyen@example.com', password: 'password123' };
+const TEST_CREDENTIALS = { email: 'annguyen@gmail.com', password: 'password123' };
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,12 +43,17 @@ export default function LoginScreen() {
     setPasswordError('');
     setGeneralError('');
 
-    const emailTrim = email.trim();
-    if (!emailTrim) {
-      setEmailError('Vui lòng nhập địa chỉ email');
+    const inputTrim = email.trim();
+    if (!inputTrim) {
+      setEmailError('Vui lòng nhập email hoặc tên đăng nhập');
       isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-      setEmailError('Email không đúng định dạng');
+    } else if (inputTrim.includes('@')) {
+      if (!EMAIL_REGEX.test(inputTrim)) {
+        setEmailError('Email không đúng định dạng (VD: example@gmail.com)');
+        isValid = false;
+      }
+    } else if (inputTrim.length < 3) {
+      setEmailError('Tên đăng nhập tối thiểu 3 ký tự');
       isValid = false;
     }
 
@@ -68,9 +74,11 @@ export default function LoginScreen() {
     setLoading(true);
     setGeneralError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       const data = await authApi.login({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
@@ -78,7 +86,13 @@ export default function LoginScreen() {
       // Điều hướng vào nhóm tabs chính
       router.replace('/(tabs)' as any);
     } catch (err: any) {
-      setGeneralError(err.message || 'Đăng nhập không thành công');
+      const backendMsg =
+        err.response?.data?.message ||
+        err.response?.data?.data?.email ||
+        (typeof err.response?.data === 'string' ? err.response?.data : null) ||
+        err.message ||
+        'Đăng nhập không thành công';
+      setGeneralError(backendMsg);
     } finally {
       setLoading(false);
     }
@@ -94,8 +108,9 @@ export default function LoginScreen() {
   };
 
   const handleSendResetLink = () => {
-    if (!forgotEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) {
-      Alert.alert('Thông báo', 'Vui lòng nhập đúng định dạng email');
+    const cleanForgotEmail = forgotEmail.trim();
+    if (!cleanForgotEmail || !EMAIL_REGEX.test(cleanForgotEmail)) {
+      Alert.alert('Thông báo', 'Vui lòng nhập đúng định dạng email/Gmail (VD: example@gmail.com)');
       return;
     }
     setForgotSuccess(true);
@@ -103,7 +118,7 @@ export default function LoginScreen() {
       setForgotPasswordVisible(false);
       setForgotSuccess(false);
       setForgotEmail('');
-      Alert.alert('Thành công', 'Đã gửi hướng dẫn đặt lại mật khẩu đến email của bạn.');
+      Alert.alert('Thành công', 'Đã gửi hướng dẫn đặt lại mật khẩu đến ' + cleanForgotEmail);
     }, 1000);
   };
 
@@ -140,12 +155,11 @@ export default function LoginScreen() {
           {/* Form nhập liệu */}
           <View style={styles.form}>
             <TextField
-              label="Email"
-              placeholder="nhap.email@vidu.com"
+              label="Email hoặc Tên đăng nhập"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              leftIcon="mail"
+              leftIcon="user"
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
@@ -187,17 +201,6 @@ export default function LoginScreen() {
               style={{ marginTop: 8 }}
             />
 
-            {/* Chip bấm nhanh tài khoản test */}
-            <TouchableOpacity
-              onPress={handleFillTestAccount}
-              style={styles.testAccountChip}
-            >
-              <Feather name="key" size={14} color={colors.primary} style={{ marginRight: 6 }} />
-              <Text style={styles.testAccountText}>
-                Điền tài khoản test: <Text style={{ fontWeight: '700' }}>an@email.com</Text>
-              </Text>
-            </TouchableOpacity>
-
             {/* Link Đăng ký */}
             <View style={styles.registerPrompt}>
               <Text style={styles.registerPromptText}>Chưa có tài khoản? </Text>
@@ -221,8 +224,8 @@ export default function LoginScreen() {
           </Text>
 
           <TextField
-            label="Email tài khoản"
-            placeholder="an@email.com"
+            label="Email / Gmail tài khoản"
+            placeholder="annguyen@gmail.com"
             keyboardType="email-address"
             autoCapitalize="none"
             leftIcon="mail"
