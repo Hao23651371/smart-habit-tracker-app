@@ -47,75 +47,80 @@ export const HabitCard: React.FC<HabitCardProps> = ({
       : 'Tối';
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={onPress}
+    <View
       style={[
         styles.card,
         isDone && isTodayVariant && styles.cardDone,
       ]}
     >
       <View style={styles.contentRow}>
-        {/* Icon danh mục */}
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: `${habit.color || colors.primary}1A` },
-          ]}
+        {/* Phần nội dung có thể bấm xem chi tiết */}
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={onPress}
+          style={styles.mainClickable}
         >
-          <Feather
-            name={(habit.icon as any) || 'activity'}
-            size={20}
-            color={habit.color || colors.primary}
-          />
-        </View>
-
-        {/* Nội dung thói quen */}
-        <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text
-              style={[
-                styles.title,
-                isDone && isTodayVariant && styles.titleDone,
-              ]}
-              numberOfLines={1}
-            >
-              {habit.title}
-            </Text>
+          {/* Icon danh mục */}
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${habit.color || colors.primary}1A` },
+            ]}
+          >
+            <Feather
+              name={(habit.icon as any) || 'activity'}
+              size={20}
+              color={habit.color || colors.primary}
+            />
           </View>
 
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{frequencyText}</Text>
-            <View style={styles.dotSeparator} />
-            <Text style={styles.slotBadge}>{timeSlotLabel}</Text>
+          {/* Nội dung thói quen */}
+          <View style={styles.textContainer}>
+            <View style={styles.titleRow}>
+              <Text
+                style={[
+                  styles.title,
+                  isDone && isTodayVariant && styles.titleDone,
+                ]}
+                numberOfLines={1}
+              >
+                {habit.title}
+              </Text>
+            </View>
 
-            {/* Ràng buộc: Dưới 3 ngày (1, 2) không hiển thị streak; từ ngày 3 trở đi mới hiển thị */}
-            {streak >= 3 && (
-              <>
-                <View style={styles.dotSeparator} />
-                <Text style={styles.streakText}>🔥 {streak}</Text>
-              </>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>{frequencyText}</Text>
+              <View style={styles.dotSeparator} />
+              <Text style={styles.slotBadge}>{timeSlotLabel}</Text>
+
+              {/* Ràng buộc: Dưới 3 ngày (1, 2) không hiển thị streak; từ ngày 3 trở đi mới hiển thị */}
+              {streak >= 3 && (
+                <>
+                  <View style={styles.dotSeparator} />
+                  <Text style={styles.streakText}>🔥 {streak}</Text>
+                </>
+              )}
+            </View>
+
+            {/* Dải 7 chấm tiến độ tuần cho biến thể "list" */}
+            {!isTodayVariant && (
+              <View style={styles.weekProgressRow}>
+                {weekProgress.map((done, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.weekDot,
+                      done ? styles.weekDotDone : styles.weekDotEmpty,
+                    ]}
+                  />
+                ))}
+                <Text style={styles.weekLabel}>Tuần này</Text>
+              </View>
             )}
           </View>
+        </TouchableOpacity>
 
-          {/* Dải 7 chấm tiến độ tuần cho biến thể "list" */}
-          {!isTodayVariant && (
-            <View style={styles.weekProgressRow}>
-              {weekProgress.map((done, idx) => (
-                <View
-                  key={idx}
-                  style={[
-                    styles.weekDot,
-                    done ? styles.weekDotDone : styles.weekDotEmpty,
-                  ]}
-                />
-              ))}
-              <Text style={styles.weekLabel}>Tuần này</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Nút check tròn cho biến thể "today" */}
+        {/* Nút check tròn cho biến thể "today" (Tách biệt độc lập, không lồng TouchableOpacity) */}
         {isTodayVariant && (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -124,13 +129,13 @@ export const HabitCard: React.FC<HabitCardProps> = ({
               styles.checkButton,
               isDone ? styles.checkButtonDone : styles.checkButtonUndone,
             ]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {isDone && <Feather name="check" size={16} color="#FFFFFF" />}
           </TouchableOpacity>
         )}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -151,6 +156,12 @@ const styles = StyleSheet.create({
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  mainClickable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 6,
   },
   iconContainer: {
     width: 44,

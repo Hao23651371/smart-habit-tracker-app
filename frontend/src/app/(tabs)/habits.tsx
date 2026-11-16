@@ -213,7 +213,11 @@ export default function HabitsScreen() {
   );
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      floatingAction={
+        <FloatingAddButton onPress={() => router.push('/habit/form' as any)} />
+      }
+    >
       {/* Header với nút tìm kiếm */}
       <AppHeader
         title="Thói quen của tôi"
@@ -244,9 +248,6 @@ export default function HabitsScreen() {
         {listColumn}
         {detailColumn}
       </View>
-
-      {/* Floating Add Button */}
-      <FloatingAddButton onPress={() => router.push('/habit/form' as any)} />
 
       {/* BottomSheet xem danh sách danh mục */}
       <BottomSheet

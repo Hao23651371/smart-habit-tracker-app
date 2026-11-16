@@ -27,7 +27,21 @@ export function getPastDates(daysCount: number, endDate: Date = new Date()): str
  * Trả về chuỗi ngày tiếng Việt, ví dụ: "Thứ Bảy, 7 tháng 11"
  */
 export function getVietnameseDateText(dateInput: Date | string = new Date()): string {
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  let d: Date;
+  if (typeof dateInput === 'string') {
+    if (dateInput.includes('-')) {
+      const parts = dateInput.split('-').map((p) => parseInt(p, 10));
+      if (parts.length === 3) {
+        d = new Date(parts[0], parts[1] - 1, parts[2]);
+      } else {
+        d = new Date(dateInput);
+      }
+    } else {
+      d = new Date(dateInput);
+    }
+  } else {
+    d = dateInput;
+  }
   const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
   const dayOfWeek = dayNames[d.getDay()];
   const day = d.getDate();
