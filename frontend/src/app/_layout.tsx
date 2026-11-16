@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { TamaguiProvider, Theme } from 'tamagui';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -158,15 +159,17 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-          <Theme name="light">
-            <StatusBar style="dark" />
-            <AppReminderController />
-          </Theme>
-        </TamaguiProvider>
-      </QueryClientProvider>
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+            <Theme name="light">
+              <StatusBar style="dark" />
+              <AppReminderController />
+            </Theme>
+          </TamaguiProvider>
+        </QueryClientProvider>
+      </Provider>
+    </SafeAreaProvider>
   );
 }

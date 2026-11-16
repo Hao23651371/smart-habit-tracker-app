@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, fontSizes, shadows } from '../../theme/tokens';
 import { TextField, PrimaryButton, BottomSheet } from '../../components';
 import { authApi } from '../../api/authApi';
@@ -22,6 +23,7 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -128,7 +130,13 @@ export default function LoginScreen() {
       style={styles.keyboardContainer}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top, 24) + 16,
+            paddingBottom: Math.max(insets.bottom, 24) + 16,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.cardContainer}>

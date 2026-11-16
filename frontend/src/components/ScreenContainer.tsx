@@ -5,9 +5,10 @@ import {
   StyleSheet,
   useWindowDimensions,
   ViewStyle,
-  SafeAreaView,
   Platform,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/tokens';
 
 export interface ScreenContainerProps {
@@ -26,7 +27,19 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   contentContainerStyle,
 }) => {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isWide = width >= 768;
+
+  // Tính toán khoảng cách an toàn phía trên (Top Safe Area Inset) để tránh thanh tác vụ (Status Bar)
+  // và camera đục lỗ (Cutout/Punch Hole) trên Android & iOS:
+  // - Android: StatusBar.currentHeight hoặc insets.top, thêm 14px để chữ/icon có khoảng cách thoáng đãng
+  // - iOS: insets.top (Dynamic Island / tai thỏ) thêm 10px
+  // - Web: Cố định 24px
+  const topPadding = Platform.OS === 'web'
+    ? 24
+    : Platform.OS === 'android'
+      ? Math.max(insets.top, StatusBar.currentHeight ?? 0, 38) + 14
+      : Math.max(insets.top, 20) + 10;
 
   const innerContent = (
     <View
@@ -41,13 +54,14 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       {scrollable ? (
         <ScrollView
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
+            { paddingTop: topPadding },
             contentContainerStyle,
           ]}
           showsVerticalScrollIndicator={Platform.OS === 'web'}
@@ -56,16 +70,22 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
           {innerContent}
         </ScrollView>
       ) : (
-        <View style={[styles.staticContent, contentContainerStyle]}>
+        <View
+          style={[
+            styles.staticContent,
+            { paddingTop: topPadding },
+            contentContainerStyle,
+          ]}
+        >
           {innerContent}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: colors.background,
   },
@@ -77,14 +97,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 24 : 12,
     paddingBottom: 140, // Đảm bảo lớn hơn chiều cao Tab Bar (72px - 98px) để thẻ cuối không bao giờ bị che
   },
   staticContent: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 24 : 12,
     paddingBottom: 140,
   },
   innerContainer: {

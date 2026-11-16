@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, shadows, fontSizes } from '../theme/tokens';
 
 export interface ReminderBannerProps {
@@ -26,10 +27,13 @@ export const ReminderBanner: React.FC<ReminderBannerProps> = ({
   onConfirm,
   onDismiss,
 }) => {
+  const insets = useSafeAreaInsets();
   if (!visible) return null;
 
+  const topOffset = Platform.OS === 'web' ? 16 : Math.max(insets.top, 24) + 12;
+
   return (
-    <View pointerEvents="box-none" style={styles.overlay}>
+    <View pointerEvents="box-none" style={[styles.overlay, { top: topOffset }]}>
       <Animated.View
         entering={FadeInUp.duration(300)}
         exiting={FadeOutUp.duration(250)}
