@@ -1,17 +1,47 @@
 db = db.getSiblingDB("smart_habit_tracker");
-// ---------- Hàm tạo collection nếu chưa có ----------
+// ---------- Hàm tạo collection nếu chưa có và cập nhật ràng buộc ----------
 function ensure(name, validator) {
   const exists = db.getCollectionNames().includes(name);
   if (!exists) {
     db.createCollection(name, validator ? { validator: { $jsonSchema: validator } } : {});
     print("Đã tạo: " + name);
   } else {
-    print("Đã có: " + name);
+    if (validator) {
+      try {
+        db.runCommand({ collMod: name, validator: { $jsonSchema: validator }, validationLevel: "moderate" });
+        print("Đã cập nhật ràng buộc (validator): " + name);
+      } catch (e) {
+        print("Không thể cập nhật validator cho " + name + ": " + e);
+      }
+    } else {
+      print("Đã có: " + name);
+    }
   }
 }
 
-// ---------- 1. users (đã có, chỉ thêm index) ----------
-ensure("users");
+// ---------- 1. users (Ràng buộc định dạng Email/Gmail, họ tên, mật khẩu) ----------
+ensure("users", {
+  bsonType: "object",
+  required: ["email", "password", "fullName"],
+  properties: {
+    email: {
+      bsonType: "string",
+      pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+      description: "Email/Gmail phải đúng định dạng"
+    },
+    password: {
+      bsonType: "string",
+      description: "Mật khẩu người dùng"
+    },
+    fullName: {
+      bsonType: "string",
+      description: "Họ và tên người dùng"
+    },
+    role: {
+      enum: ["ROLE_USER", "ROLE_ADMIN"]
+    }
+  }
+});
 db.users.createIndex({ email: 1 }, { unique: true });
 
 // ---------- 2. categories ----------
@@ -145,12 +175,18 @@ db.habit_templates.insertMany([
 const sampleUserId = ObjectId("6af67daaa89a708b3285ba4a");
 const sampleUserStrId = "6af67daaa89a708b3285ba4a";
 
+// Đồng bộ / Cập nhật tài khoản mẫu cũ sang định dạng Gmail chuẩn annguyen@gmail.com
+db.users.updateMany(
+  { email: { $in: ["an.nguyen@example.com", "an.nguyen@gmail.com"] } },
+  { $set: { email: "annguyen@gmail.com", updatedAt: new Date() } }
+);
+
 db.users.updateOne(
-  { email: "an.nguyen@example.com" },
+  { email: "annguyen@gmail.com" },
   {
     $setOnInsert: {
       _id: sampleUserId,
-      email: "an.nguyen@example.com",
+      email: "annguyen@gmail.com",
       password: "$2a$10$UFgMNkeP3qoxw1/DmCkak.NMEQM8fQkj1ZQQpYkTMPN47zRGTBs2q", // BCrypt của: password123
       fullName: "An Nguyễn",
       role: "ROLE_USER",

@@ -28,7 +28,7 @@ const fallbackUser = {
   _id: 'usr_default',
   name: 'An Nguyễn',
   fullName: 'An Nguyễn',
-  email: 'an.nguyen@example.com',
+  email: 'annguyen@gmail.com',
   avatarUrl: undefined as string | undefined,
   avatar: undefined as string | undefined,
   onboarding: {

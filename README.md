@@ -91,9 +91,9 @@ npx expo start
 
 Bạn có thể đăng nhập ngay với tài khoản mẫu đã nạp sẵn dữ liệu:
 
-| Tài khoản | Email | Mật khẩu | Ghi chú |
+| Tài khoản | Email / Gmail | Mật khẩu | Ghi chú |
 | :--- | :--- | :--- | :--- |
-| **Demo User** | `an.nguyen@example.com` | `password123` | Có sẵn thói quen, streak và lịch sử check-in |
+| **Demo User** | `annguyen@gmail.com` | `password123` | Có sẵn thói quen, streak 12 ngày và lịch sử 90 ngày |
 
 *(Bạn cũng có thể bấm **Đăng ký** trên màn hình để tạo tài khoản mới độc lập).*
 

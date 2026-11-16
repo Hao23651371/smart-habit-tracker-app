@@ -78,7 +78,12 @@ function AuthNavigationGuard() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          title: 'Smart Habit - Habit Tracker App',
+        }}
+      />
       {(!initialCheckDone || isLoading) && (
         <View
           style={[

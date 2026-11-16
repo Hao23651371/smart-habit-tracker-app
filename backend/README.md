@@ -83,7 +83,7 @@ Backend chạy mặc định tại cổng: `http://localhost:8080`
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"an.nguyen@example.com\",\"password\":\"password123\"}"
+  -d "{\"email\":\"annguyen@gmail.com\",\"password\":\"password123\"}"
 ```
 Copy giá trị `token` từ response: `data.token`.
 
