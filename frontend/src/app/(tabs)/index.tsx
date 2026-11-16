@@ -34,7 +34,7 @@ import { Achievement } from '../../types';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isWide = width >= 768;
 
   const { user } = useAppSelector((state) => state.auth);
@@ -436,8 +436,16 @@ export default function HomeScreen() {
             </Text>
           </View>
         ) : (
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 10, paddingVertical: 6 }}>
+          <ScrollView
+            style={{ maxHeight: Math.min(Math.max(height * 0.65, 380), 560) }}
+            contentContainerStyle={{ paddingVertical: 6, paddingBottom: 24 }}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            bounces={true}
+            alwaysBounceVertical={false}
+          >
+            <View style={{ gap: 10 }}>
               {notificationList.map(({ habit, type, title, time, message }) => {
                 const isCompleted = type === 'completed';
                 const isMissed = type === 'missed';
